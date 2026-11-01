@@ -42,7 +42,6 @@ student/ volunteer/ officer/   placeholder，组员换成自己的页面（保�
 assets/css/style.css     全站样式（没有 Bootstrap）
 assets/js/main.js        全站 JavaScript
 assets/img/              首页用的图（自己画的 SVG：手机画面、电路板背景）
-assets/fonts/            字体 Bricolage Grotesque（标题、数字）+ Figtree（内文），免费 OFL 授权，放本地所以没网络也能显示
 uploads/devices/         student 上传的 device 照片
 ```
 
