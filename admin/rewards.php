@@ -8,11 +8,11 @@ require_role($conn, 'admin', '../');
 
 // ---------- Delete (only if nobody has redeemed it, so the history stays complete) ----------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete') {
-    $id = (int) ($_POST['rewardID'] ?? 0);
-    if (db_value($conn, "SELECT COUNT(*) FROM redemptions WHERE rewardID = ?", 'i', [$id]) > 0) {
+    $id = trim($_POST['rewardID'] ?? '');
+    if (db_value($conn, "SELECT COUNT(*) FROM redemptions WHERE rewardID = ?", 's', [$id]) > 0) {
         set_flash('error', 'This reward has been redeemed before, so it cannot be deleted. Set its stock to 0 instead.');
     } else {
-        db_exec($conn, "DELETE FROM rewards WHERE rewardID = ?", 'i', [$id]);
+        db_exec($conn, "DELETE FROM rewards WHERE rewardID = ?", 's', [$id]);
         set_flash('success', 'Reward deleted.');
     }
     redirect('rewards.php');
@@ -41,11 +41,11 @@ page_head('gift', 'Rewards', 'What students can swap their points for.',
                 <li title="Times redeemed"><?= icon('history') ?> <?= (int) $w['times_used'] ?> used</li>
             </ul>
             <footer>
-                <a class="btn btn-outline btn-sm" href="reward_form.php?edit=<?= (int) $w['rewardID'] ?>"><?= icon('edit') ?> Edit</a>
+                <a class="btn btn-outline btn-sm" href="reward_form.php?edit=<?= e($w['rewardID']) ?>"><?= icon('edit') ?> Edit</a>
                 <?php if ($w['times_used'] == 0): ?>
                     <form method="post" data-confirm="Delete <?= e($w['reward_name']) ?>?">
                         <input type="hidden" name="action" value="delete">
-                        <input type="hidden" name="rewardID" value="<?= (int) $w['rewardID'] ?>">
+                        <input type="hidden" name="rewardID" value="<?= e($w['rewardID']) ?>">
                         <button class="btn btn-danger btn-sm"><?= icon('trash') ?> Delete</button>
                     </form>
                 <?php endif; ?>

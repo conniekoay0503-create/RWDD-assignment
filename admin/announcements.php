@@ -9,7 +9,7 @@ require_role($conn, 'admin', '../');
 $me = $_SESSION['tp_number'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete') {
-    db_exec($conn, "DELETE FROM announcements WHERE announcementID = ?", 'i', [(int) ($_POST['announcementID'] ?? 0)]);
+    db_exec($conn, "DELETE FROM announcements WHERE announcementID = ?", 's', [trim($_POST['announcementID'] ?? '')]);
     set_flash('success', 'Announcement deleted.');
     redirect('announcements.php');
 }
@@ -50,10 +50,10 @@ page_head('megaphone', 'Announcements', 'News for everyone. They appear on every
             <footer>
                 <small class="muted"><?= icon('user') ?> <?= e($a['name']) ?></small>
                 <span class="icon-actions">
-                    <a class="btn-icon" href="announcement_form.php?edit=<?= (int) $a['announcementID'] ?>" title="Edit" aria-label="Edit <?= e($a['title']) ?>"><?= icon('edit') ?></a>
+                    <a class="btn-icon" href="announcement_form.php?edit=<?= e($a['announcementID']) ?>" title="Edit" aria-label="Edit <?= e($a['title']) ?>"><?= icon('edit') ?></a>
                     <form method="post" data-confirm="Delete this announcement?">
                         <input type="hidden" name="action" value="delete">
-                        <input type="hidden" name="announcementID" value="<?= (int) $a['announcementID'] ?>">
+                        <input type="hidden" name="announcementID" value="<?= e($a['announcementID']) ?>">
                         <button class="btn-icon danger" title="Delete" aria-label="Delete <?= e($a['title']) ?>"><?= icon('trash') ?></button>
                     </form>
                 </span>

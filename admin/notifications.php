@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'read_one') {
         // "AND tp_number = ?" so an admin can only change their own notifications
         db_exec($conn, "UPDATE notifications SET is_read = 1 WHERE notificationID = ? AND tp_number = ?",
-            'is', [(int) ($_POST['notificationID'] ?? 0), $me]);
+            'ss', [trim($_POST['notificationID'] ?? ''), $me]);
     }
     // Go back to the page the admin was on. Only a plain file name like "users.php" is allowed,
     // so nobody can make this page redirect to another website.
@@ -61,7 +61,7 @@ page_head('bell', 'Notifications', 'Messages sent to you by the system and other
                 <?php if (!$n['is_read']): ?>
                     <form method="post">
                         <input type="hidden" name="action" value="read_one">
-                        <input type="hidden" name="notificationID" value="<?= (int) $n['notificationID'] ?>">
+                        <input type="hidden" name="notificationID" value="<?= e($n['notificationID']) ?>">
                         <input type="hidden" name="back" value="notifications.php">
                         <button class="btn-icon" title="Mark as read" aria-label="Mark as read"><?= icon('check') ?></button>
                     </form>

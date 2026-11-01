@@ -64,3 +64,27 @@ Student 做了需要 admin 处理的事（兑换 cashback、送 feedback、申�
 notify_admins($conn, 'New cashback request', $name . ' redeemed RM2 Cashback.');
 ```
 它会发给每一个 active 的 admin，admin 右上角的铃铛就会出现红点数字。
+
+## 6. 给组员：ID 前缀（很重要）
+所有 ID 都是「前缀 + 3 位数字」的 VARCHAR(10)，**不是** AUTO_INCREMENT，所以 INSERT 时一定要自己给 ID：
+
+| 表 | 前缀 | 例子 |
+|---|---|---|
+| announcements | A | A001 |
+| categories | C | C001 |
+| challenges | CH | CH001 |
+| devices | D | D001 |
+| device_status_history | H | H001 |
+| feedback | F | F001 |
+| notifications | N | N001 |
+| points_transactions | T | T001 |
+| redemptions | R | R001 |
+| rewards | RW | RW001 |
+| volunteer_request | VR | VR001 |
+
+用 `functions.php` 里的 `next_id()` 拿下一个号码：
+```php
+$deviceID = next_id($conn, 'devices', 'deviceID', 'D');   // 例如 'D016'
+db_exec($conn, "INSERT INTO devices (deviceID, submitted_by, ...) VALUES (?, ?, ...)", 'ss...', [$deviceID, $tp, ...]);
+```
+bind_param 里 ID 的类型是 `'s'`（字符串），不是 `'i'`。`notify()` 已经自己处理 notification 的 ID。

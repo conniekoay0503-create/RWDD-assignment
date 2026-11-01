@@ -9,7 +9,7 @@ require '../includes/functions.php';
 require_role($conn, 'admin', '../');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $id     = (int) ($_POST['categoryID'] ?? 0);   // 0 = new category
+    $id     = trim($_POST['categoryID'] ?? '');   // '' = new category
     $name   = trim($_POST['category_name'] ?? '');
     $mult   = filter_var($_POST['multiplier'] ?? '', FILTER_VALIDATE_FLOAT);
     $max    = filter_var($_POST['max_points'] ?? '', FILTER_VALIDATE_INT);
@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($mult === false || $mult <= 0 || $mult > 99999) $errors[] = 'Multiplier must be a number above 0.';
     if ($max === false || $max <= 0)                    $errors[] = 'Max points must be a whole number above 0.';
     // Name must be unique (ignore the category we are editing)
-    if (db_value($conn, "SELECT COUNT(*) FROM categories WHERE category_name = ? AND categoryID <> ?", 'si', [$name, $id]) > 0) {
+    if (db_value($conn, "SELECT COUNT(*) FROM categories WHERE category_name = ? AND categoryID <> ?", 'ss', [$name, $id]) > 0) {
         $errors[] = 'A category with this name already exists.';
     }
 
@@ -31,11 +31,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     if ($id) {
         db_exec($conn, "UPDATE categories SET category_name = ?, multiplier = ?, max_points = ?, is_active = ? WHERE categoryID = ?",
-            'sdiii', [$name, $mult, $max, $active, $id]);
+            'sdiis', [$name, $mult, $max, $active, $id]);
         set_flash('success', 'Category updated. The new points apply to devices finished from now on.');
     } else {
-        db_exec($conn, "INSERT INTO categories (category_name, multiplier, max_points, is_active) VALUES (?, ?, ?, ?)",
-            'sdii', [$name, $mult, $max, $active]);
+        $new_id = next_id($conn, 'categories', 'categoryID', 'C');
+        db_exec($conn, "INSERT INTO categories (categoryID, category_name, multiplier, max_points, is_active) VALUES (?, ?, ?, ?, ?)",
+            'ssdii', [$new_id, $name, $mult, $max, $active]);
         set_flash('success', 'Category added.');
     }
     redirect('categories.php');
@@ -43,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $edit = null;
 if (isset($_GET['edit'])) {
-    $edit = db_one($conn, "SELECT * FROM categories WHERE categoryID = ?", 'i', [(int) $_GET['edit']]);
+    $edit = db_one($conn, "SELECT * FROM categories WHERE categoryID = ?", 's', [$_GET['edit']]);
 }
 $form = $_SESSION['old'] ?? $edit ?? [];
 unset($_SESSION['old']);
@@ -55,7 +56,7 @@ page_head($edit ? 'edit' : 'plus', $edit ? 'Edit ' . $edit['category_name'] : 'A
 ?>
 <section class="card narrow">
     <form method="post" novalidate data-validate>
-        <input type="hidden" name="categoryID" value="<?= (int) ($edit['categoryID'] ?? 0) ?>">
+        <input type="hidden" name="categoryID" value="<?= e($edit['categoryID'] ?? '') ?>">
         <div class="field">
             <label for="category_name"><?= icon('tag') ?> Category name</label>
             <input type="text" id="category_name" name="category_name" maxlength="50" required value="<?= e($form['category_name'] ?? '') ?>" placeholder="e.g. Smartwatch">

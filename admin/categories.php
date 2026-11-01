@@ -9,11 +9,11 @@ require_role($conn, 'admin', '../');
 
 // ---------- Delete (only when no device uses the category) ----------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete') {
-    $id = (int) ($_POST['categoryID'] ?? 0);
-    if (db_value($conn, "SELECT COUNT(*) FROM devices WHERE categoryID = ?", 'i', [$id]) > 0) {
+    $id = trim($_POST['categoryID'] ?? '');
+    if (db_value($conn, "SELECT COUNT(*) FROM devices WHERE categoryID = ?", 's', [$id]) > 0) {
         set_flash('error', 'Devices already use this category, so it cannot be deleted. Edit it and untick "Active" to hide it instead.');
     } else {
-        db_exec($conn, "DELETE FROM categories WHERE categoryID = ?", 'i', [$id]);
+        db_exec($conn, "DELETE FROM categories WHERE categoryID = ?", 's', [$id]);
         set_flash('success', 'Category deleted.');
     }
     redirect('categories.php');
@@ -56,11 +56,11 @@ page_head('tag', 'Categories & points', 'Repaired = weight × multiplier × 2 ·
                 <li title="Recycled"><?= icon('recycle') ?> <?= (int) $c['recycled'] ?> recycled</li>
             </ul>
             <footer>
-                <a class="btn btn-outline btn-sm" href="category_form.php?edit=<?= (int) $c['categoryID'] ?>"><?= icon('edit') ?> Edit</a>
+                <a class="btn btn-outline btn-sm" href="category_form.php?edit=<?= e($c['categoryID']) ?>"><?= icon('edit') ?> Edit</a>
                 <?php if ($c['devices'] == 0): ?>
                     <form method="post" data-confirm="Delete <?= e($c['category_name']) ?>?">
                         <input type="hidden" name="action" value="delete">
-                        <input type="hidden" name="categoryID" value="<?= (int) $c['categoryID'] ?>">
+                        <input type="hidden" name="categoryID" value="<?= e($c['categoryID']) ?>">
                         <button class="btn btn-danger btn-sm"><?= icon('trash') ?> Delete</button>
                     </form>
                 <?php else: ?>

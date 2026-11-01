@@ -8,7 +8,7 @@ require_role($conn, 'admin', '../');
 $me = $_SESSION['tp_number'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $id      = (int) ($_POST['announcementID'] ?? 0);
+    $id      = trim($_POST['announcementID'] ?? '');
     $title   = trim($_POST['title'] ?? '');
     $message = trim($_POST['message'] ?? '');
 
@@ -21,10 +21,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('announcement_form.php' . ($id ? '?edit=' . $id : ''));
     }
     if ($id) {
-        db_exec($conn, "UPDATE announcements SET title = ?, message = ? WHERE announcementID = ?", 'ssi', [$title, $message, $id]);
+        db_exec($conn, "UPDATE announcements SET title = ?, message = ? WHERE announcementID = ?", 'sss', [$title, $message, $id]);
         set_flash('success', 'Announcement updated.');
     } else {
-        db_exec($conn, "INSERT INTO announcements (created_by, title, message) VALUES (?, ?, ?)", 'sss', [$me, $title, $message]);
+        $new_id = next_id($conn, 'announcements', 'announcementID', 'A');
+        db_exec($conn, "INSERT INTO announcements (announcementID, created_by, title, message) VALUES (?, ?, ?, ?)", 'ssss', [$new_id, $me, $title, $message]);
         set_flash('success', 'Announcement posted. Everyone can see it now.');
     }
     redirect('announcements.php');
@@ -32,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $edit = null;
 if (isset($_GET['edit'])) {
-    $edit = db_one($conn, "SELECT * FROM announcements WHERE announcementID = ?", 'i', [(int) $_GET['edit']]);
+    $edit = db_one($conn, "SELECT * FROM announcements WHERE announcementID = ?", 's', [$_GET['edit']]);
 }
 $form = $_SESSION['old'] ?? $edit ?? [];
 unset($_SESSION['old']);
@@ -44,7 +45,7 @@ page_head($edit ? 'edit' : 'megaphone', $edit ? 'Edit announcement' : 'Post an a
 ?>
 <section class="card narrow">
     <form method="post" novalidate data-validate>
-        <input type="hidden" name="announcementID" value="<?= (int) ($edit['announcementID'] ?? 0) ?>">
+        <input type="hidden" name="announcementID" value="<?= e($edit['announcementID'] ?? '') ?>">
         <div class="field">
             <label for="an_title"><?= icon('type') ?> Title</label>
             <input type="text" id="an_title" name="title" maxlength="100" required value="<?= e($form['title'] ?? '') ?>">

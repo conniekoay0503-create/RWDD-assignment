@@ -10,9 +10,9 @@ require_role($conn, 'admin', '../');
 
 // ---------- Delete (only before the challenge starts) ----------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete') {
-    $id = (int) ($_POST['challengeID'] ?? 0);
+    $id = trim($_POST['challengeID'] ?? '');
     // "start_date > CURDATE()" inside the DELETE itself, so a started challenge is never deleted
-    $n = db_exec($conn, "DELETE FROM challenges WHERE challengeID = ? AND start_date > CURDATE()", 'i', [$id]);
+    $n = db_exec($conn, "DELETE FROM challenges WHERE challengeID = ? AND start_date > CURDATE()", 's', [$id]);
     set_flash($n === 1 ? 'success' : 'error', $n === 1 ? 'Challenge deleted.' : 'Only challenges that have not started can be deleted.');
     redirect('challenges.php');
 }
@@ -61,10 +61,10 @@ page_head('flag', 'Challenges', 'Each student who reaches the target with their 
             <?php endif; ?>
             <footer>
                 <?php if ($c['state'] === 'Upcoming'): ?>
-                    <a class="btn btn-outline btn-sm" href="challenge_form.php?edit=<?= (int) $c['challengeID'] ?>"><?= icon('edit') ?> Edit</a>
+                    <a class="btn btn-outline btn-sm" href="challenge_form.php?edit=<?= e($c['challengeID']) ?>"><?= icon('edit') ?> Edit</a>
                     <form method="post" data-confirm="Delete <?= e($c['title']) ?>?">
                         <input type="hidden" name="action" value="delete">
-                        <input type="hidden" name="challengeID" value="<?= (int) $c['challengeID'] ?>">
+                        <input type="hidden" name="challengeID" value="<?= e($c['challengeID']) ?>">
                         <button class="btn btn-danger btn-sm"><?= icon('trash') ?> Delete</button>
                     </form>
                 <?php else: ?>

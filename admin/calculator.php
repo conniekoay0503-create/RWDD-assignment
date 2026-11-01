@@ -20,7 +20,7 @@ page_head('calculator', 'Points calculator', 'Try a weight to see how many point
             <label for="calc_cat"><?= icon('tag') ?> Category</label>
             <select id="calc_cat" data-calc-category>
                 <?php foreach ($categories as $c): ?>
-                    <option value="<?= (int) $c['categoryID'] ?>" data-multiplier="<?= e($c['multiplier'] + 0) ?>" data-max="<?= (int) $c['max_points'] ?>"><?= e($c['category_name']) ?></option>
+                    <option value="<?= e($c['categoryID']) ?>" data-multiplier="<?= e($c['multiplier'] + 0) ?>" data-max="<?= (int) $c['max_points'] ?>"><?= e($c['category_name']) ?></option>
                 <?php endforeach; ?>
             </select>
         </div>

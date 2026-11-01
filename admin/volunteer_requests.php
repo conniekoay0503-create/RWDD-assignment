@@ -9,18 +9,18 @@ require_role($conn, 'admin', '../');
 $me = $_SESSION['tp_number'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'review_request') {
-    $requestID = (int) ($_POST['requestID'] ?? 0);
+    $requestID = trim($_POST['requestID'] ?? '');
     $decision  = ($_POST['decision'] ?? '') === 'approved' ? 'approved' : 'rejected';
 
     $conn->begin_transaction();
     try {
         // Only a request that is still pending can be reviewed (stops two admins reviewing it twice)
         $n = db_exec($conn, "UPDATE volunteer_request SET status = ?, reviewed_by = ?, reviewed_at = NOW()
-                             WHERE requestID = ? AND status = 'pending'", 'ssi', [$decision, $me, $requestID]);
+                             WHERE requestID = ? AND status = 'pending'", 'sss', [$decision, $me, $requestID]);
         if ($n !== 1) {
             throw new Exception('This request has already been reviewed.');
         }
-        $student = db_value($conn, "SELECT tp_number FROM volunteer_request WHERE requestID = ?", 'i', [$requestID]);
+        $student = db_value($conn, "SELECT tp_number FROM volunteer_request WHERE requestID = ?", 's', [$requestID]);
 
         if ($decision === 'approved') {
             // A user has exactly one role: remove the student role, then add the volunteer role
@@ -72,13 +72,13 @@ page_head('heart', 'Volunteer requests', 'Students who want to repair devices. A
             <footer>
                 <form method="post" data-confirm="Approve <?= e($r['name']) ?> as a Repair Volunteer?">
                     <input type="hidden" name="action" value="review_request">
-                    <input type="hidden" name="requestID" value="<?= (int) $r['requestID'] ?>">
+                    <input type="hidden" name="requestID" value="<?= e($r['requestID']) ?>">
                     <input type="hidden" name="decision" value="approved">
                     <button class="btn btn-primary btn-sm"><?= icon('check') ?> Approve</button>
                 </form>
                 <form method="post" data-confirm="Reject this request?">
                     <input type="hidden" name="action" value="review_request">
-                    <input type="hidden" name="requestID" value="<?= (int) $r['requestID'] ?>">
+                    <input type="hidden" name="requestID" value="<?= e($r['requestID']) ?>">
                     <input type="hidden" name="decision" value="rejected">
                     <button class="btn btn-outline btn-sm"><?= icon('x') ?> Reject</button>
                 </form>

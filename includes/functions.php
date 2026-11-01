@@ -87,11 +87,22 @@ function db_exec($conn, $sql, $types = '', $params = [])
     return $stmt->affected_rows;
 }
 
+// Make the next ID for a table, e.g. next_id($conn, 'announcements', 'announcementID', 'A') -> 'A003'.
+// It finds the biggest number already used after the prefix and adds 1.
+// $table / $column / $prefix are always written by us in the code (never typed by a user), so they are safe in the SQL.
+function next_id($conn, $table, $column, $prefix)
+{
+    $start = strlen($prefix) + 1;   // where the number starts, e.g. 'CH001' -> position 3
+    $last = db_value($conn, "SELECT COALESCE(MAX(CAST(SUBSTRING($column, $start) AS UNSIGNED)), 0) FROM $table");
+    return $prefix . str_pad($last + 1, 3, '0', STR_PAD_LEFT);   // 7 -> 'A007', 1000 -> 'A1000'
+}
+
 // Send a personal notification to one user ($by = admin tp_number, or null for system)
 function notify($conn, $tp_number, $title, $message, $by = null)
 {
-    db_exec($conn, "INSERT INTO notifications (tp_number, created_by, title, message) VALUES (?, ?, ?, ?)",
-        'ssss', [$tp_number, $by, $title, $message]);
+    $id = next_id($conn, 'notifications', 'notificationID', 'N');
+    db_exec($conn, "INSERT INTO notifications (notificationID, tp_number, created_by, title, message) VALUES (?, ?, ?, ?, ?)",
+        'sssss', [$id, $tp_number, $by, $title, $message]);
 }
 
 // Send the same notification to every active admin.
@@ -138,7 +149,6 @@ function require_role($conn, $role, $root)
         set_flash('error', 'Your account has been deactivated. Please contact an Admin.');
         redirect($root . 'login.php');
     }
-    $_SESSION['role'] = find_role($conn, $_SESSION['tp_number']);
     if ($_SESSION['role'] !== $role) {
         redirect($root . home_for($_SESSION['role']));
     }

@@ -10,50 +10,51 @@ $me = $_SESSION['tp_number'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
-    $id     = (int) ($_POST['redemptionID'] ?? 0);
+    $id     = trim($_POST['redemptionID'] ?? '');
 
     // ---------- Approve & pay ----------
-    // Stock was already taken when the student made the request, so approving only marks it as paid.
     if ($action === 'approve') {
-        $red = db_one($conn, "SELECT r.tp_number, r.cash_value, u.email FROM redemptions r
-                              JOIN users u ON u.tp_number = r.tp_number WHERE r.redemptionID = ?", 'i', [$id]);
+        $red = db_one($conn, "SELECT r.*, u.email, w.reward_name FROM redemptions r
+                              JOIN users u ON u.tp_number = r.tp_number
+                              JOIN rewards w ON w.rewardID = r.rewardID WHERE r.redemptionID = ?", 's', [$id]);
         $conn->begin_transaction();
         try {
-            // Mark completed, but only if it is still pending (stops two admins approving it twice)
+            // Step 1: mark completed, but only if it is still pending
             $n = db_exec($conn, "UPDATE redemptions SET status = 'completed', reviewed_by = ?, reviewed_at = NOW()
-                                 WHERE redemptionID = ? AND status = 'pending'", 'si', [$me, $id]);
+                                 WHERE redemptionID = ? AND status = 'pending'", 'ss', [$me, $id]);
             if ($n !== 1) {
                 throw new Exception('This request has already been reviewed.');
+            }
+            // Step 2: take one from stock, but only if there is stock left
+            $n = db_exec($conn, "UPDATE rewards SET stock = stock - 1 WHERE rewardID = ? AND stock > 0", 's', [$red['rewardID']]);
+            if ($n !== 1) {
+                throw new Exception('"' . $red['reward_name'] . '" is out of stock. Add stock first, or reject the request to refund the points.');
             }
             notify($conn, $red['tp_number'], 'Cashback paid', rm($red['cash_value']) . ' has been paid to the APCard linked to your email.', $me);
             $conn->commit();
             set_flash('success', 'Approved. Please pay ' . rm($red['cash_value']) . ' to the APCard linked to ' . $red['email'] . '.');
         } catch (Exception $ex) {
-            $conn->rollback();   // undo everything if any step failed
+            $conn->rollback();   // undo step 1 if step 2 failed
             set_flash('error', $ex instanceof mysqli_sql_exception ? 'Something went wrong. Please try again.' : $ex->getMessage());
         }
         redirect('cashback.php');
     }
 
-    // ---------- Reject (refund the points and give the stock back) ----------
+    // ---------- Reject (refund the points) ----------
     if ($action === 'reject') {
-        $red = db_one($conn, "SELECT tp_number, points_used, rewardID FROM redemptions WHERE redemptionID = ?", 'i', [$id]);
         $conn->begin_transaction();
         try {
             $n = db_exec($conn, "UPDATE redemptions SET status = 'cancelled', reviewed_by = ?, reviewed_at = NOW()
-                                 WHERE redemptionID = ? AND status = 'pending'", 'si', [$me, $id]);
+                                 WHERE redemptionID = ? AND status = 'pending'", 'ss', [$me, $id]);
             if ($n !== 1) {
                 throw new Exception('This request has already been reviewed.');
             }
-            // Ledger rule: never delete a transaction. Add a "+points" refund that cancels the "-points" redeem.
-            db_exec($conn, "INSERT INTO points_transactions (tp_number, redemptionID, points, txn_type, description)
-                            VALUES (?, ?, ?, 'refund', 'Refund: cashback request rejected')",
-                'sii', [$red['tp_number'], $id, $red['points_used']]);
-            // The request reserved one item when it was made, so give it back
-            db_exec($conn, "UPDATE rewards SET stock = stock + 1 WHERE rewardID = ?", 'i', [$red['rewardID']]);
-            notify($conn, $red['tp_number'], 'Cashback rejected', 'Your cashback request was rejected and your points have been returned.', $me);
+            // Balance = SUM(points), so removing the "-points" row gives the points back
+            db_exec($conn, "DELETE FROM points_transactions WHERE redemptionID = ? AND txn_type = 'redeem'", 's', [$id]);
+            $tp = db_value($conn, "SELECT tp_number FROM redemptions WHERE redemptionID = ?", 's', [$id]);
+            notify($conn, $tp, 'Cashback rejected', 'Your cashback request was rejected and your points have been returned.', $me);
             $conn->commit();
-            set_flash('success', 'Request rejected. Points refunded and stock returned.');
+            set_flash('success', 'Request rejected and points refunded.');
         } catch (Exception $ex) {
             $conn->rollback();
             set_flash('error', $ex instanceof mysqli_sql_exception ? 'Something went wrong. Please try again.' : $ex->getMessage());
@@ -104,12 +105,12 @@ page_head('wallet', 'Cashback requests', 'Approve a request, then pay the amount
             <footer>
                 <form method="post" data-confirm="Approve and pay <?= rm($p['cash_value']) ?> to <?= e($p['email']) ?>?">
                     <input type="hidden" name="action" value="approve">
-                    <input type="hidden" name="redemptionID" value="<?= (int) $p['redemptionID'] ?>">
+                    <input type="hidden" name="redemptionID" value="<?= e($p['redemptionID']) ?>">
                     <button class="btn btn-primary btn-sm"><?= icon('check') ?> Approve &amp; pay</button>
                 </form>
                 <form method="post" data-confirm="Reject this request? The points will be returned to the student.">
                     <input type="hidden" name="action" value="reject">
-                    <input type="hidden" name="redemptionID" value="<?= (int) $p['redemptionID'] ?>">
+                    <input type="hidden" name="redemptionID" value="<?= e($p['redemptionID']) ?>">
                     <button class="btn btn-outline btn-sm"><?= icon('x') ?> Reject</button>
                 </form>
             </footer>

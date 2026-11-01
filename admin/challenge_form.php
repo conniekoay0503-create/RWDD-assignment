@@ -13,11 +13,11 @@ $me = $_SESSION['tp_number'];
 // A challenge can only be edited before it starts (students may already be working on it)
 function not_started($conn, $id)
 {
-    return db_value($conn, "SELECT COUNT(*) FROM challenges WHERE challengeID = ? AND start_date > CURDATE()", 'i', [$id]) == 1;
+    return db_value($conn, "SELECT COUNT(*) FROM challenges WHERE challengeID = ? AND start_date > CURDATE()", 's', [$id]) == 1;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $id     = (int) ($_POST['challengeID'] ?? 0);   // 0 = new challenge
+    $id     = trim($_POST['challengeID'] ?? '');   // '' = new challenge
     $title  = trim($_POST['title'] ?? '');
     $desc   = trim($_POST['description'] ?? '');
     $target = filter_var($_POST['target_kg'] ?? '', FILTER_VALIDATE_FLOAT);
@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($end < $start)          $errors[] = 'The end date must be on or after the start date.';
         // Two date ranges overlap when: existing.start <= new.end AND existing.end >= new.start
         $clash = db_one($conn, "SELECT title FROM challenges WHERE start_date <= ? AND end_date >= ? AND challengeID <> ?",
-            'ssi', [$end, $start, $id]);
+            'sss', [$end, $start, $id]);
         if ($clash) $errors[] = 'These dates overlap with "' . $clash['title'] . '". Only one challenge can run at a time.';
     }
 
@@ -60,17 +60,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($id) {
         db_exec($conn, "UPDATE challenges SET title = ?, description = ?, target_kg = ?, start_date = ?, end_date = ?, bonus_points = ?
-                        WHERE challengeID = ?", 'ssdssii', [$title, $desc, $target, $start, $end, $bonus, $id]);
+                        WHERE challengeID = ?", 'ssdssis', [$title, $desc, $target, $start, $end, $bonus, $id]);
         set_flash('success', 'Challenge updated.');
     } else {
         $conn->begin_transaction();
         try {
-            db_exec($conn, "INSERT INTO challenges (created_by, title, description, target_kg, start_date, end_date, bonus_points)
-                            VALUES (?, ?, ?, ?, ?, ?, ?)", 'sssdssi', [$me, $title, $desc, $target, $start, $end, $bonus]);
+            $new_id = next_id($conn, 'challenges', 'challengeID', 'CH');
+            db_exec($conn, "INSERT INTO challenges (challengeID, created_by, title, description, target_kg, start_date, end_date, bonus_points)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)", 'ssssdssi', [$new_id, $me, $title, $desc, $target, $start, $end, $bonus]);
             // Tell everyone about it on the announcement board
             $msg = $desc . ' Runs ' . nice_date($start) . ' to ' . nice_date($end) . '. Reach ' . ($target + 0) . ' kg to earn ' . $bonus . ' bonus points.';
-            db_exec($conn, "INSERT INTO announcements (created_by, title, message) VALUES (?, ?, ?)",
-                'sss', [$me, 'New challenge: ' . $title, substr($msg, 0, 500)]);
+            $ann_id = next_id($conn, 'announcements', 'announcementID', 'A');
+            db_exec($conn, "INSERT INTO announcements (announcementID, created_by, title, message) VALUES (?, ?, ?, ?)",
+                'ssss', [$ann_id, $me, 'New challenge: ' . $title, substr($msg, 0, 500)]);
             $conn->commit();
             set_flash('success', 'Challenge created and announced to everyone.');
         } catch (mysqli_sql_exception $ex) {
@@ -83,7 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $edit = null;
 if (isset($_GET['edit'])) {
-    $edit = db_one($conn, "SELECT * FROM challenges WHERE challengeID = ? AND start_date > CURDATE()", 'i', [(int) $_GET['edit']]);
+    $edit = db_one($conn, "SELECT * FROM challenges WHERE challengeID = ? AND start_date > CURDATE()", 's', [$_GET['edit']]);
 }
 // After a failed save, show what the admin typed instead of the saved values
 $form = $_SESSION['old'] ?? $edit ?? [];
@@ -97,7 +99,7 @@ page_head($edit ? 'edit' : 'plus', $edit ? 'Edit challenge' : 'Create a challeng
 ?>
 <section class="card narrow">
     <form method="post" novalidate data-validate>
-        <input type="hidden" name="challengeID" value="<?= (int) ($edit['challengeID'] ?? 0) ?>">
+        <input type="hidden" name="challengeID" value="<?= e($edit['challengeID'] ?? '') ?>">
         <div class="field">
             <label for="title"><?= icon('flag') ?> Title</label>
             <input type="text" id="title" name="title" maxlength="100" required value="<?= e($form['title'] ?? '') ?>" placeholder="e.g. Battery Round-Up">

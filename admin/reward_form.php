@@ -7,7 +7,7 @@ require '../includes/functions.php';
 require_role($conn, 'admin', '../');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $id     = (int) ($_POST['rewardID'] ?? 0);   // 0 = new reward
+    $id     = trim($_POST['rewardID'] ?? '');   // '' = new reward
     $name   = trim($_POST['reward_name'] ?? '');
     $desc   = trim($_POST['description'] ?? '');
     $points = filter_var($_POST['points_required'] ?? '', FILTER_VALIDATE_INT);
@@ -28,11 +28,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     if ($id) {
         db_exec($conn, "UPDATE rewards SET reward_name = ?, description = ?, points_required = ?, cash_value = ?, stock = ?
-                        WHERE rewardID = ?", 'ssidii', [$name, $desc, $points, $cash, $stock, $id]);
+                        WHERE rewardID = ?", 'ssidis', [$name, $desc, $points, $cash, $stock, $id]);
         set_flash('success', 'Reward updated.');
     } else {
-        db_exec($conn, "INSERT INTO rewards (reward_name, description, points_required, cash_value, stock) VALUES (?, ?, ?, ?, ?)",
-            'ssidi', [$name, $desc, $points, $cash, $stock]);
+        $new_id = next_id($conn, 'rewards', 'rewardID', 'RW');
+        db_exec($conn, "INSERT INTO rewards (rewardID, reward_name, description, points_required, cash_value, stock) VALUES (?, ?, ?, ?, ?, ?)",
+            'sssidi', [$new_id, $name, $desc, $points, $cash, $stock]);
         set_flash('success', 'Reward added.');
     }
     redirect('rewards.php');
@@ -40,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $edit = null;
 if (isset($_GET['edit'])) {
-    $edit = db_one($conn, "SELECT * FROM rewards WHERE rewardID = ?", 'i', [(int) $_GET['edit']]);
+    $edit = db_one($conn, "SELECT * FROM rewards WHERE rewardID = ?", 's', [$_GET['edit']]);
 }
 $form = $_SESSION['old'] ?? $edit ?? [];
 unset($_SESSION['old']);
@@ -52,7 +53,7 @@ page_head($edit ? 'edit' : 'plus', $edit ? 'Edit reward' : 'Add a reward', 'Stud
 ?>
 <section class="card narrow">
     <form method="post" novalidate data-validate>
-        <input type="hidden" name="rewardID" value="<?= (int) ($edit['rewardID'] ?? 0) ?>">
+        <input type="hidden" name="rewardID" value="<?= e($edit['rewardID'] ?? '') ?>">
         <div class="field">
             <label for="reward_name"><?= icon('gift') ?> Reward name</label>
             <input type="text" id="reward_name" name="reward_name" maxlength="100" required value="<?= e($form['reward_name'] ?? '') ?>" placeholder="RM5 Cashback">

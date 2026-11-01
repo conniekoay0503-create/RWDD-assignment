@@ -6,7 +6,7 @@ require '../config/db.php';
 require '../includes/functions.php';
 require_role($conn, 'admin', '../');
 $me = $_SESSION['tp_number'];
-$id = (int) ($_GET['id'] ?? $_POST['feedbackID'] ?? 0);
+$id = trim($_GET['id'] ?? $_POST['feedbackID'] ?? '');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $reply = trim($_POST['admin_reply'] ?? '');
@@ -16,9 +16,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     // "admin_reply IS NULL" = only the first admin to reply succeeds
     $n = db_exec($conn, "UPDATE feedback SET admin_reply = ?, replied_by = ?, replied_at = NOW()
-                         WHERE feedbackID = ? AND admin_reply IS NULL", 'ssi', [$reply, $me, $id]);
+                         WHERE feedbackID = ? AND admin_reply IS NULL", 'sss', [$reply, $me, $id]);
     if ($n === 1) {
-        $tp = db_value($conn, "SELECT tp_number FROM feedback WHERE feedbackID = ?", 'i', [$id]);
+        $tp = db_value($conn, "SELECT tp_number FROM feedback WHERE feedbackID = ?", 's', [$id]);
         notify($conn, $tp, 'Admin replied', 'An admin replied to your feedback: "' . substr($reply, 0, 180) . '"', $me);
         set_flash('success', 'Reply sent.');
     } else {
@@ -33,14 +33,14 @@ $view = db_one($conn, "SELECT f.*, u.name, u.email, d.device_name, d.status, c.c
                        JOIN devices d ON d.deviceID = f.deviceID
                        JOIN categories c ON c.categoryID = d.categoryID
                        LEFT JOIN users r ON r.tp_number = f.replied_by
-                       WHERE f.feedbackID = ?", 'i', [$id]);
+                       WHERE f.feedbackID = ?", 's', [$id]);
 if (!$view) {
     set_flash('error', 'That feedback was not found.');
     redirect('feedback.php');
 }
 $timeline = db_all($conn, "SELECT h.new_status, h.remarks, h.changed_at, u.name
                            FROM device_status_history h LEFT JOIN users u ON u.tp_number = h.changed_by
-                           WHERE h.deviceID = ? ORDER BY h.changed_at, h.historyID", 'i', [$view['deviceID']]);
+                           WHERE h.deviceID = ? ORDER BY h.changed_at, h.historyID", 's', [$view['deviceID']]);
 
 $page_title = 'Feedback';
 $active = 'feedback';
@@ -70,7 +70,7 @@ page_head('message', 'Feedback from ' . $view['name'], 'About ' . $view['device_
         </div>
         <?php if ($view['admin_reply'] === null): ?>
             <form method="post" novalidate data-validate class="reply-form">
-                <input type="hidden" name="feedbackID" value="<?= (int) $view['feedbackID'] ?>">
+                <input type="hidden" name="feedbackID" value="<?= e($view['feedbackID']) ?>">
                 <div class="field">
                     <label for="admin_reply"><?= icon('send') ?> Your reply <small class="muted" data-count-for="admin_reply"></small></label>
                     <textarea id="admin_reply" name="admin_reply" maxlength="255" rows="3" required></textarea>
