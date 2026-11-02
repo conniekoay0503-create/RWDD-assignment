@@ -53,6 +53,7 @@ function nextRecordID($conn, $table, $column, $prefix) {
     FROM $table
     WHERE $column REGEXP '^{$prefix}[0-9]+$'";
 
+
     $result = $conn->query($sql);
     $number = (int)$result->fetch_assoc()['last_number'] + 1;
 
