@@ -87,3 +87,13 @@ $deviceID = next_id($conn, 'devices', 'deviceID', 'D');   // 例如 'D016'
 db_exec($conn, "INSERT INTO devices (deviceID, submitted_by, ...) VALUES (?, ?, ...)", 'ss...', [$deviceID, $tp, ...]);
 ```
 bind_param 里 ID 的类型是 `'s'`（字符串），不是 `'i'`。`notify()` 已经自己处理 notification 的 ID。
+
+## 7. 给组员：新 status「Return Requested」
+不能修的 device 现在的流程是：
+```
+Pending Consent ──(student 同意回收)──> Awaiting Recycle ──(officer)──> Recycled
+               └─(student 要拿回)──> Return Requested ──(volunteer 拿回 Green Hub 柜台)──> Returned Unrepaired ──(student 领回)──> Collected Unrepaired
+```
+- **Student 页**：按「我要拿回」时，status 改成 `'Return Requested'`（以前是直接改成 `'Returned Unrepaired'`）。
+- **Volunteer 页**：多一个按钮，把 `'Return Requested'` 改成 `'Returned Unrepaired'`，记得同时 INSERT 一行 device_status_history。
+- **7 天规则**：`Return Requested` 超过 7 天会算进 admin dashboard 的 overdue（表示 volunteer 太慢）。但 **officer 不能 dispose** 这个 status 的 device，因为学生已经说要拿回了。

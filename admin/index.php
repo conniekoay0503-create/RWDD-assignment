@@ -12,7 +12,7 @@ $fb_new    = db_value($conn, "SELECT COUNT(*) FROM feedback WHERE admin_reply IS
 $fb_total  = db_value($conn, "SELECT COUNT(*) FROM feedback");
 $vr_new    = db_value($conn, "SELECT COUNT(*) FROM volunteer_request WHERE status = 'pending'");
 $overdue   = db_value($conn, "SELECT COUNT(*) FROM devices
-                              WHERE status IN ('Ready for Collection', 'Pending Consent', 'Returned Unrepaired')
+                              WHERE status IN ('Ready for Collection', 'Pending Consent', 'Return Requested', 'Returned Unrepaired')
                               AND DATEDIFF(NOW(), status_changed_at) > 7");
 $recycle   = db_value($conn, "SELECT COUNT(*) FROM devices WHERE status = 'Awaiting Recycle'");
 
@@ -27,9 +27,9 @@ $outcome   = db_one($conn, "SELECT COUNT(DISTINCT CASE WHEN new_status = 'Ready 
 $decided   = $outcome['fixed'] + $outcome['unfixable'];
 $success   = $decided > 0 ? round($outcome['fixed'] / $decided * 100) : 0;
 
-// ---- What devices are now (all 13 statuses, even when the count is 0) ----
+// ---- What devices are now (all 14 statuses, even when the count is 0) ----
 $statuses = ['Submitted', 'Dropped Off', 'Claimed', 'In Repair', 'Ready for Collection', 'Completed', 'Pending Consent',
-             'Awaiting Recycle', 'Recycled', 'Returned Unrepaired', 'Collected Unrepaired', 'Disposed', 'Cancelled'];
+             'Return Requested', 'Awaiting Recycle', 'Recycled', 'Returned Unrepaired', 'Collected Unrepaired', 'Disposed', 'Cancelled'];
 $counts = array_fill_keys($statuses, 0);
 foreach (db_all($conn, "SELECT status, COUNT(*) AS n FROM devices GROUP BY status") as $row) {
     $counts[$row['status']] = (int) $row['n'];
