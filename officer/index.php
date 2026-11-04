@@ -4,223 +4,213 @@ require '../config/db.php';
 require '../includes/functions.php';
 require_role($conn, 'officer', '../');
 
+$officer = $_SESSION['tp_number'];
+$name = explode(' ', trim($_SESSION['name']))[0];
+
 // Dashboard statistics
-$totalDevices = (int) db_value(
-    $conn,
-    "SELECT COUNT(*) FROM devices"
-);
+$waiting = (int) db_value($conn, "SELECT COUNT(*) FROM devices WHERE status='Awaiting Recycle' AND recycle_consent=1");
+$consent = (int) db_value($conn, "SELECT COUNT(*) FROM devices WHERE status='Pending Consent'");
+$recycled = (int) db_value($conn, "SELECT COUNT(*) FROM devices WHERE status='Recycled'");
+$mine = (int) db_value($conn, "SELECT COUNT(*) FROM devices WHERE status='Recycled' AND processed_by=?", 's', [$officer]);
+$weight = (float) db_value($conn, "SELECT COALESCE(SUM(weight_kg),0) FROM devices WHERE status='Recycled'");
+$points = (int) db_value($conn, "SELECT COALESCE(SUM(p.points),0) FROM points_transactions p JOIN devices d ON p.deviceID=d.deviceID WHERE p.txn_type='earn' AND d.status='Recycled'");
 
-$awaitingRecycle = (int) db_value(
-    $conn,
-    "SELECT COUNT(*) FROM devices
-     WHERE status = 'Awaiting Recycle'"
-);
+// Queue preview
+$queue = db_all($conn, "
+    SELECT d.deviceID, d.device_name, d.weight_kg,
+           c.category_name, u.name AS student_name
+    FROM devices d
+    JOIN categories c ON d.categoryID=c.categoryID
+    JOIN users u ON d.submitted_by=u.tp_number
+    WHERE d.status='Awaiting Recycle' AND d.recycle_consent=1
+    ORDER BY d.submitted_at ASC LIMIT 5
+");
 
-$recycledDevices = (int) db_value(
-    $conn,
-    "SELECT COUNT(*) FROM devices
-     WHERE status = 'Recycled'"
-);
+// Recent recycling
+$recent = db_all($conn, "
+    SELECT d.device_name, d.status_changed_at, u.name AS officer_name
+    FROM devices d
+    LEFT JOIN users u ON d.processed_by=u.tp_number
+    WHERE d.status='Recycled'
+    ORDER BY d.status_changed_at DESC LIMIT 6
+");
 
-$pendingConsent = (int) db_value(
-    $conn,
-    "SELECT COUNT(*) FROM devices
-     WHERE status = 'Pending Consent'"
-);
+// Category breakdown
+$categories = db_all($conn, "
+    SELECT c.category_name, COUNT(d.deviceID) AS total
+    FROM categories c
+    LEFT JOIN devices d ON d.categoryID=c.categoryID AND d.status='Recycled'
+    GROUP BY c.categoryID, c.category_name
+    ORDER BY total DESC
+");
 
-// Recycling queue
-$queue = db_all(
-    $conn,
-    "SELECT d.deviceID, d.device_name,
-            d.status, d.submitted_by,
-            d.submitted_at, c.category_name
-     FROM devices d
-     JOIN categories c
-       ON d.categoryID = c.categoryID
-     WHERE d.status = 'Awaiting Recycle'
-     ORDER BY d.submitted_at ASC"
-);
+$max = max(1, ...array_map(fn($c) => (int)$c['total'], $categories));
+
+$page_title = 'Dashboard';
+$active = 'home';
+require '../includes/officer_top.php';
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
-    <title>Recycling Officer Dashboard</title>
-    <link rel="stylesheet"
-          href="../assets/css/style.css">
-
-    <style>
-        .officer-container {
-            max-width: 1200px;
-            margin: 40px auto;
-            padding: 20px;
-        }
-
-        .officer-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .officer-stats {
-            display: grid;
-            grid-template-columns:
-                repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .officer-stat {
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 12px;
-            padding: 24px;
-        }
-
-        .officer-stat h2 {
-            font-size: 32px;
-            margin: 10px 0;
-            color: #247a53;
-        }
-
-        .officer-table-wrap {
-            overflow-x: auto;
-        }
-
-        .officer-table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-        }
-
-        .officer-table th,
-        .officer-table td {
-            padding: 14px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-
-        .officer-table th {
-            background: #eaf5ee;
-        }
-    </style>
-</head>
-
-<body class="public">
-<main class="officer-container">
-
-    <div class="officer-header">
-        <div>
-            <span class="role-tag">
-                RECYCLING OFFICER
-            </span>
-            <h1>
-                Welcome,
-                <?= e($_SESSION['name']) ?>
-            </h1>
-            <p class="muted">
-                Manage recycling operations and devices.
-            </p>
-        </div>
-
-        <a class="btn btn-primary"
-           href="../logout.php">
-            Log out
+<section class="hero-card">
+    <div class="hero-card-text">
+        <h1>Welcome back, <?= e($name) ?>!</h1>
+        <p class="serif-line">
+            <?= $waiting
+                ? "$waiting device(s) are waiting for recycling."
+                : "All recycling requests are caught up. Great work!" ?>
+        </p>
+    </div>
+    <div class="hero-actions">
+        <a class="btn btn-primary" href="recycling_queue.php">
+            <?= icon('recycle') ?> Recycling Queue
         </a>
     </div>
+    <span class="hero-art" aria-hidden="true"><?= icon('recycle') ?></span>
+</section>
 
-    <section class="officer-stats">
+<h2 class="section-title"><?= icon('clock') ?> Action Required</h2>
 
-        <div class="officer-stat">
-            <p>Total Devices</p>
-            <h2><?= $totalDevices ?></h2>
+<section class="stat-grid three">
+    <a class="stat-card <?= $waiting ? 'has-work' : '' ?>" href="recycling_queue.php">
+        <span class="stat-icon tint-mint"><?= icon('recycle') ?></span>
+        <strong class="stat-value"><?= $waiting ?></strong>
+        <span class="stat-title">Awaiting Recycling</span>
+        <small>Ready to process</small>
+    </a>
+
+    <div class="stat-card">
+        <span class="stat-icon tint-gold"><?= icon('clock') ?></span>
+        <strong class="stat-value"><?= $consent ?></strong>
+        <span class="stat-title">Pending Consent</span>
+        <small>Waiting for student approval</small>
+    </div>
+
+    <div class="stat-card">
+        <span class="stat-icon tint-sky"><?= icon('check') ?></span>
+        <strong class="stat-value"><?= $mine ?></strong>
+        <span class="stat-title">Processed by Me</span>
+        <small>My completed recycling</small>
+    </div>
+</section>
+
+<h2 class="section-title"><?= icon('chart') ?> Recycling Overview</h2>
+
+<section class="stat-grid three">
+    <div class="stat-card row">
+        <span class="stat-icon tint-mint"><?= icon('device') ?></span>
+        <div>
+            <strong class="stat-value"><?= $recycled ?></strong>
+            <span class="stat-title">Devices Recycled</span>
         </div>
+    </div>
 
-        <div class="officer-stat">
-            <p>Awaiting Recycling</p>
-            <h2><?= $awaitingRecycle ?></h2>
+    <div class="stat-card row">
+        <span class="stat-icon tint-sky"><?= icon('leaf') ?></span>
+        <div>
+            <strong class="stat-value"><?= number_format($weight, 2) ?><small>kg</small></strong>
+            <span class="stat-title">Recycled Weight</span>
         </div>
+    </div>
 
-        <div class="officer-stat">
-            <p>Recycled Devices</p>
-            <h2><?= $recycledDevices ?></h2>
+    <div class="stat-card row">
+        <span class="stat-icon tint-gold"><?= icon('star') ?></span>
+        <div>
+            <strong class="stat-value"><?= number_format($points) ?></strong>
+            <span class="stat-title">Recycling Points</span>
         </div>
+    </div>
+</section>
 
-        <div class="officer-stat">
-            <p>Pending Consent</p>
-            <h2><?= $pendingConsent ?></h2>
-        </div>
+<div class="section-head">
+    <h2 class="section-title"><?= icon('list') ?> Recycling Queue</h2>
+    <a class="link-arrow" href="recycling_queue.php">
+        View all <?= icon('arrow-right') ?>
+    </a>
+</div>
 
-    </section>
+<section class="card">
+    <div class="card-head">
+        <h2 class="card-title"><?= icon('clock') ?> Pending Requests</h2>
+        <span class="badge status-awaiting-recycle"><?= $waiting ?> pending</span>
+    </div>
 
-    <section class="card">
-        <h2>Recycling Queue</h2>
-        
-        <a href="recycling_queue.php" class="btn btn-primary">
-            View Full Recycling Queue
-        </a>
-
-        <p class="muted">
-            Devices currently awaiting recycling.
-        </p>
-
-        <div class="officer-table-wrap">
-            <table class="officer-table">
+    <?php if (!$queue): ?>
+        <p class="muted">No devices awaiting recycling.</p>
+    <?php else: ?>
+        <div class="table-wrap">
+            <table>
                 <thead>
                     <tr>
-                        <th>Device ID</th>
-                        <th>Device Name</th>
-                        <th>Category</th>
-                        <th>Submitted By</th>
-                        <th>Date</th>
-                        <th>Status</th>
+                        <th>ID</th><th>Device</th><th>Category</th>
+                        <th>Student</th><th>Weight</th><th>Action</th>
                     </tr>
                 </thead>
-
                 <tbody>
-                <?php if (empty($queue)): ?>
-                    <tr>
-                        <td colspan="6">
-                            No devices awaiting recycling.
-                        </td>
-                    </tr>
-                <?php else: ?>
-                    <?php foreach ($queue as $device): ?>
+                    <?php foreach ($queue as $d): ?>
                         <tr>
-                        <td>
-                            <?= e($device['deviceID']) ?>
-                        </td>
-
+                            <td><strong><?= e($d['deviceID']) ?></strong></td>
+                            <td><?= e($d['device_name']) ?></td>
+                            <td><?= e($d['category_name']) ?></td>
+                            <td><?= e($d['student_name']) ?></td>
+                            <td><?= $d['weight_kg'] !== null
+                                ? number_format((float)$d['weight_kg'], 2) . ' kg'
+                                : 'Not recorded' ?></td>
                             <td>
-                                <?= e($device['device_name']) ?>
-                            </td>
-                            <td>
-                                <?= e($device['category_name']) ?>
-                            </td>
-                            <td>
-                                <?= e($device['submitted_by']) ?>
-                            </td>
-                            <td>
-                                <?= nice_date(
-                                    $device['submitted_at']
-                                ) ?>
-                            </td>
-                            <td>
-                                <?= e($device['status']) ?>
+                                <a class="btn btn-primary btn-sm"
+                                   href="process_recycling.php?deviceID=<?= urlencode($d['deviceID']) ?>">
+                                    <?= icon('recycle') ?> Process
+                                </a>
                             </td>
                         </tr>
                     <?php endforeach; ?>
-                <?php endif; ?>
                 </tbody>
             </table>
         </div>
+    <?php endif; ?>
+</section>
+
+<div class="two-col">
+    <section class="card">
+        <h2 class="card-title"><?= icon('chart') ?> Recycling by Category</h2>
+        <ul class="bar-list">
+            <?php foreach ($categories as $c): ?>
+                <li>
+                    <span><?= e($c['category_name']) ?></span>
+                    <span class="bar">
+                        <span style="width: <?= round($c['total'] / $max * 100) ?>%"></span>
+                    </span>
+                    <strong><?= (int)$c['total'] ?></strong>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+        <div class="bar-total">
+            <span>All recycled devices</span>
+            <strong><?= $recycled ?></strong>
+        </div>
     </section>
 
-</main>
-</body>
-</html>
+    <section class="card">
+        <h2 class="card-title"><?= icon('history') ?> Recent Activity</h2>
+
+        <?php if (!$recent): ?>
+            <p class="muted">No recycling activity yet.</p>
+        <?php else: ?>
+            <ul class="activity">
+                <?php foreach ($recent as $r): ?>
+                    <li>
+                        <span class="activity-dot"><?= icon('recycle') ?></span>
+                        <div>
+                            <strong><?= e($r['device_name']) ?></strong> — Recycled
+                            <small>
+                                <?= e($r['officer_name'] ?? 'System') ?> ·
+                                <?= nice_date($r['status_changed_at'], true) ?>
+                            </small>
+                        </div>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
+    </section>
+</div>
+
+<?php require '../includes/officer_bottom.php'; ?>

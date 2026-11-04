@@ -1,218 +1,183 @@
-
 <?php
 require '../config/db.php';
 require '../includes/functions.php';
 require_role($conn, 'officer', '../');
 
-// Only devices with student recycling consent
-// and an eligible recycling status enter this queue.
-$devices = db_all(
-    $conn,
-    "SELECT
-        d.deviceID,
-        d.device_name,
-        d.fault_description,
-        d.weight_kg,
-        d.status,
-        d.submitted_by,
-        d.submitted_at,
-        c.category_name,
-        u.name AS student_name
-     FROM devices d
-     JOIN categories c
-       ON d.categoryID = c.categoryID
-     JOIN users u
-       ON d.submitted_by = u.tp_number
-     WHERE d.status = 'Awaiting Recycle'
-       AND d.recycle_consent = 1
-     ORDER BY d.submitted_at ASC"
+// Devices eligible for recycling
+$devices = db_all($conn, "
+    SELECT d.deviceID, d.device_name, d.weight_kg,
+           d.status, d.submitted_at, d.submitted_by,
+           c.category_name, u.name AS student_name
+    FROM devices d
+    JOIN categories c ON d.categoryID = c.categoryID
+    JOIN users u ON d.submitted_by = u.tp_number
+    WHERE d.status = 'Awaiting Recycle'
+      AND d.recycle_consent = 1
+    ORDER BY d.submitted_at ASC
+");
+
+// Categories for dropdown
+$categories = array_unique(
+    array_column($devices, 'category_name')
+);
+sort($categories);
+
+$page_title = 'Recycling Queue';
+$active = 'recycling';
+require '../includes/officer_top.php';
+?>
+
+<?php if (($_GET['success'] ?? '') === '1'): ?>
+    <div class="card" role="status">
+        <strong><?= icon('check') ?> Recycling completed!</strong>
+        <p class="muted">
+            Device processed, points awarded,
+            and student notified.
+        </p>
+    </div>
+<?php endif; ?>
+
+<?php
+officer_page_head(
+    'recycle',
+    'Recycling Queue',
+    'Devices awaiting recycling with student consent.'
 );
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
-    <title>Recycling Queue</title>
-    <link rel="stylesheet"
-          href="../assets/css/style.css">
-
-    <style>
-        .queue-container {
-            max-width: 1200px;
-            margin: 40px auto;
-            padding: 20px;
-        }
-
-        .queue-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 15px;
-            flex-wrap: wrap;
-            margin-bottom: 25px;
-        }
-
-        .queue-table-wrap {
-            overflow-x: auto;
-        }
-
-        .queue-table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-        }
-
-        .queue-table th,
-        .queue-table td {
-            padding: 14px;
-            border-bottom: 1px solid #ddd;
-            text-align: left;
-        }
-
-        .queue-table th {
-            background: #eaf5ee;
-        }
-
-        .queue-status {
-            color: #247a53;
-            font-weight: 600;
-        }
-
-        .queue-empty {
-            padding: 25px;
-            text-align: center;
-        }
-        
-        .recycling-success {
-            background-color: #e8f8ef;
-            border: 1px solid #a3dfbc;
-            border-left: 5px solid #239b63;
-            color: #176b46;
-            padding: 16px 20px;
-            border-radius: 10px;
-            margin-bottom: 24px;
-        }
-
-        .recycling-success strong {
-            display: block;
-            margin-bottom: 6px;
-            font-size: 16px;
-        }
-
-        .recycling-success p {
-            margin: 0;
-            font-size: 14px;
-            line-height: 1.5;
-        }
-
-    </style>
-</head>
-
-
-<body class="public">
-<main class="queue-container">
-
-    <?php if (($_GET['success'] ?? '') === '1'): ?>
-        <div class="recycling-success" role="status">
-            <strong>
-                Recycling Completed Successfully!
-            </strong>
-            <p>
-                The device has been recycled,
-                student points have been awarded,
-                and a notification has been created.
-            </p>
-        </div>
-    <?php endif; ?>
-
-    <div class="queue-header">
-
-        <div>
-            <h1>Recycling Queue</h1>
-            <p class="muted">
-                Devices awaiting recycling processing.
-            </p>
-        </div>
-
-        <a href="index.php" class="btn btn-primary">
-            Back to Dashboard
-        </a>
+<section class="stat-grid">
+    <div class="stat-card">
+        <span class="stat-icon tint-mint">
+            <?= icon('recycle') ?>
+        </span>
+        <strong class="stat-value">
+            <?= count($devices) ?>
+        </strong>
+        <span class="stat-title">Pending Devices</span>
+        <small>Ready for processing</small>
     </div>
+</section>
 
-    <section class="card">
-        <h2>
-            Pending Devices (<?= count($devices) ?>)
+<section class="card">
+
+    <div class="card-head">
+        <h2 class="card-title">
+            <?= icon('list') ?> Pending Requests
         </h2>
 
-        <div class="queue-table-wrap">
-            <table class="queue-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Device</th>
-                        <th>Category</th>
-                        <th>Student</th>
-                        <th>Weight</th>
-                        <th>Submitted</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
+        <label class="search-box">
+            <?= icon('search') ?>
+            <input type="search" id="queueSearch"
+                   placeholder="Search devices..."
+                   aria-label="Search devices">
+        </label>
 
-                <tbody>
-                <?php if (empty($devices)): ?>
-                    <tr>
-                        <td colspan="8" class="queue-empty">
-                            No devices awaiting recycling.
-                        </td>
-                    </tr>
-                <?php else: ?>
-                    <?php foreach ($devices as $device): ?>
-                        <tr>   
+        <select id="categoryFilter"
+                aria-label="Filter by category">
+            <option value="">All Categories</option>
+            <?php foreach ($categories as $category): ?>
+                <option value="<?= e($category) ?>">
+                    <?= e($category) ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Device</th>
+                    <th>Category</th>
+                    <th>Student</th>
+                    <th>Weight</th>
+                    <th>Submitted</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                <?php foreach ($devices as $device): ?>
+                    <tr class="device-row"
+                        data-category="<?= e($device['category_name']) ?>"
+                        data-search="<?= e(strtolower(
+                            $device['deviceID'] . ' ' .
+                            $device['device_name'] . ' ' .
+                            $device['category_name'] . ' ' .
+                            $device['student_name'] . ' ' .
+                            $device['submitted_by']
+                        )) ?>">
+
+                        <td><strong><?= e($device['deviceID']) ?></strong></td>
+                        <td><?= e($device['device_name']) ?></td>
+                        <td><?= e($device['category_name']) ?></td>
                         <td>
-                            <?= e($device['deviceID']) ?>
+                            <?= e($device['student_name']) ?>
+                            <small class="muted">
+                                <?= e($device['submitted_by']) ?>
+                            </small>
                         </td>
-
-                            <td>
-                                <?= e($device['device_name']) ?>
-                            </td>
-                            <td>
-                                <?= e($device['category_name']) ?>
-                            </td>
-                            <td>
-                                <?= e($device['student_name']) ?>
-                            </td>
-                            <td>
-                                <?= $device['weight_kg'] !== null
-                                    ? e($device['weight_kg']) . ' kg'
-                                    : 'Not recorded' ?>
-                            </td>
-                            <td>
-                                <?= nice_date(
-                                    $device['submitted_at']
-                                ) ?>
-                            </td>
-                            <td class="queue-status">
+                        <td>
+                            <?= $device['weight_kg'] !== null
+                                ? number_format((float)$device['weight_kg'], 2) . ' kg'
+                                : 'Not recorded' ?>
+                        </td>
+                        <td><?= nice_date($device['submitted_at']) ?></td>
+                        <td>
+                            <span class="badge status-awaiting-recycle">
                                 <?= e($device['status']) ?>
-                            </td>                           
-                            <td>
-                                <a class="btn btn-primary"
-                                href="process_recycling.php?deviceID=<?= urlencode($device['deviceID']) ?>">
-                                    Process Device
-                                </a>
-                            </td>
+                            </span>
+                        </td>
+                        <td>
+                            <a class="btn btn-primary btn-sm"
+                               href="process_recycling.php?deviceID=<?= urlencode($device['deviceID']) ?>">
+                                <?= icon('recycle') ?> Process
+                            </a>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
 
-                        </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
-    </section>
+    <p id="queueEmpty" class="muted" hidden>
+        No matching devices found.
+    </p>
 
-</main>
-</body>
-</html>
+    <?php if (!$devices): ?>
+        <p class="muted">No devices awaiting recycling.</p>
+    <?php endif; ?>
+
+</section>
+
+<script>
+const search = document.getElementById('queueSearch');
+const category = document.getElementById('categoryFilter');
+const rows = document.querySelectorAll('.device-row');
+const empty = document.getElementById('queueEmpty');
+
+function filterQueue() {
+    const term = search.value.trim().toLowerCase();
+    let visible = 0;
+
+    rows.forEach(row => {
+        const match =
+            row.dataset.search.includes(term) &&
+            (!category.value ||
+             row.dataset.category === category.value);
+
+        row.hidden = !match;
+        row.style.display = match ? '' : 'none';
+        if (match) visible++;
+    });
+
+    empty.hidden = visible > 0 || rows.length === 0;
+}
+
+search.addEventListener('input', filterQueue);
+category.addEventListener('change', filterQueue);
+</script>
+
+<?php require '../includes/officer_bottom.php'; ?>

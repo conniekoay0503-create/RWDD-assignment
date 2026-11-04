@@ -4,48 +4,33 @@ require '../config/db.php';
 require '../includes/functions.php';
 require_role($conn, 'officer', '../');
 
-// Get device ID as a string, e.g. D006
 $deviceID = trim($_GET['deviceID'] ?? '');
-
 if ($deviceID === '') {
     http_response_code(400);
     exit('No device selected.');
 }
 
-// Fetch the selected device and category settings
-$stmt = $conn->prepare(
-    "SELECT d.deviceID, d.device_name,
-            d.weight_kg, d.status,
-            d.recycle_consent,
-            c.category_name,
-            c.multiplier, c.max_points
-     FROM devices d
-     JOIN categories c
-       ON d.categoryID = c.categoryID
-     WHERE d.deviceID = ?
-     LIMIT 1"
-);
-
-$stmt->bind_param('s', $deviceID);
-$stmt->execute();
-$device = $stmt->get_result()->fetch_assoc();
-$stmt->close();
+$device = db_one($conn, "
+    SELECT d.deviceID, d.device_name, d.weight_kg,
+           d.status, d.recycle_consent,
+           c.category_name, c.multiplier, c.max_points
+    FROM devices d
+    JOIN categories c ON d.categoryID = c.categoryID
+    WHERE d.deviceID = ?
+    LIMIT 1
+", 's', [$deviceID]);
 
 if (!$device) {
     http_response_code(404);
     exit('Device not found.');
 }
 
-// Only eligible devices can be processed
-if (
-    $device['status'] !== 'Awaiting Recycle' ||
-    (int)$device['recycle_consent'] !== 1
-) {
+if ($device['status'] !== 'Awaiting Recycle' ||
+    (int)$device['recycle_consent'] !== 1) {
     http_response_code(403);
     exit('This device is not eligible for recycling.');
 }
 
-// Exact disposal methods from your database
 $methods = [
     'Certified e-waste recycler',
     'Battery take-back programme',
@@ -53,154 +38,96 @@ $methods = [
     'Harvest parts for repair stock'
 ];
 
-// Generate CSRF token for secure form submission
 if (empty($_SESSION['recycle_csrf'])) {
     $_SESSION['recycle_csrf'] = bin2hex(random_bytes(32));
 }
+
+$page_title = 'Process Recycling';
+$active = 'recycling';
+require '../includes/officer_top.php';
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport"
-      content="width=device-width, initial-scale=1.0">
+<?php
+officer_page_head(
+    'recycle',
+    'Process Recycling',
+    'Verify the device information and confirm recycling.',
+    '<a href="recycling_queue.php" class="btn btn-outline">'
+    . icon('arrow-left') . ' Back to Queue</a>'
+);
+?>
 
-<title>Process Recycling</title>
+<div class="two-col">
 
-<link rel="stylesheet"
-      href="../assets/css/style.css">
+    <!-- DEVICE DETAILS -->
+    <section class="card">
+        <h2 class="card-title">
+            <?= icon('device') ?> Device Information
+        </h2>
 
-<style>
-.process-container {
-    max-width: 750px;
-    margin: 40px auto;
-    padding: 20px;
-}
-
-.process-card {
-    background: white;
-    border: 1px solid #ddd;
-    border-radius: 12px;
-    padding: 30px;
-}
-
-.form-group {
-    margin: 20px 0;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 600;
-}
-
-.form-group input,
-.form-group select {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    box-sizing: border-box;
-}
-
-.points-preview {
-    background: #eaf5ee;
-    padding: 20px;
-    border-radius: 10px;
-    margin: 20px 0;
-}
-
-.points-preview h2 {
-    color: #247a53;
-    margin: 8px 0;
-}
-
-.process-actions {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin-top: 20px;
-}
-
-.process-note {
-    color: #666;
-    font-size: 13px;
-    margin-top: 15px;
-}
-</style>
-</head>
-
-<body class="public">
-<main class="process-container">
-
-    <a href="recycling_queue.php">
-        Back to Recycling Queue
-    </a>
-
-    <h1>Process Recycling</h1>
-
-    <div class="process-card">
-
-        <h2><?= e($device['device_name']) ?></h2>
+        <h3><?= e($device['device_name']) ?></h3>
 
         <p>
-            Device ID:
+            <strong>Device ID:</strong>
             <?= e($device['deviceID']) ?>
         </p>
 
         <p>
-            Category:
+            <strong>Category:</strong>
             <?= e($device['category_name']) ?>
         </p>
 
         <p>
-            Status:
-            <?= e($device['status']) ?>
+            <strong>Status:</strong>
+            <span class="badge status-awaiting-recycle">
+                <?= e($device['status']) ?>
+            </span>
         </p>
 
-        <!-- Recycling confirmation form -->
+        <p>
+            <strong>Category Multiplier:</strong>
+            <?= e($device['multiplier']) ?>
+        </p>
+
+        <p>
+            <strong>Maximum Points:</strong>
+            <?= e($device['max_points']) ?>
+        </p>
+    </section>
+
+    <!-- RECYCLING FORM -->
+    <section class="card">
+        <h2 class="card-title">
+            <?= icon('recycle') ?> Recycling Details
+        </h2>
+
         <form id="recyclingForm"
               action="confirm_recycling.php"
               method="POST">
 
-            <!-- CSRF security token -->
-            <input type="hidden"
-                   name="csrf_token"
+            <input type="hidden" name="csrf_token"
                    value="<?= e($_SESSION['recycle_csrf']) ?>">
 
-            <!-- Device ID -->
-            <input type="hidden"
-                   name="deviceID"
+            <input type="hidden" name="deviceID"
                    value="<?= e($device['deviceID']) ?>">
 
-            <!-- Device weight -->
             <div class="form-group">
                 <label for="weight">
                     Actual Device Weight (kg)
                 </label>
 
-                <input type="number"
-                       id="weight"
+                <input type="number" id="weight"
                        name="weight_kg"
-                       min="0.01"
-                       max="50"
-                       step="0.01"
+                       min="0.01" max="50" step="0.01"
                        value="<?= e($device['weight_kg'] ?? '') ?>"
-                       placeholder="e.g. 2.50"
-                       required>
+                       placeholder="e.g. 2.50" required>
             </div>
 
-            <!-- Disposal method -->
             <div class="form-group">
-                <label for="method">
-                    Disposal Method
-                </label>
+                <label for="method">Disposal Method</label>
 
                 <select id="method"
-                        name="disposal_method"
-                        required>
-
+                        name="disposal_method" required>
                     <option value="">
                         Select disposal method
                     </option>
@@ -210,125 +137,82 @@ if (empty($_SESSION['recycle_csrf'])) {
                             <?= e($method) ?>
                         </option>
                     <?php endforeach; ?>
-
                 </select>
             </div>
 
-            <!-- Points preview -->
-            <div class="points-preview">
+            <div class="card" style="margin:20px 0;">
+                <p class="muted">Estimated Student Points</p>
 
-                <p>Estimated Student Points</p>
+                <h2 id="pointsResult">0 points</h2>
 
-                <h2 id="pointsResult">
-                    0 points
-                </h2>
-
-                <p>
-                    Category Multiplier:
-                    <?= e($device['multiplier']) ?>
-                </p>
-
-                <p>
-                    Maximum Points:
-                    <?= e($device['max_points']) ?>
-                </p>
-
+                <small class="muted">
+                    Weight × <?= e($device['multiplier']) ?>
+                    (maximum <?= e($device['max_points']) ?> points)
+                </small>
             </div>
 
-            <!-- Action buttons -->
-            <div class="process-actions">
-
-                <button type="submit"
-                        id="confirmButton"
+            <div class="hero-actions">
+                <button type="submit" id="confirmButton"
                         class="btn btn-primary">
-                    Confirm Recycling
+                    <?= icon('check') ?> Confirm Recycling
                 </button>
 
                 <a href="recycling_queue.php"
-                   class="btn">
+                   class="btn btn-outline">
                     Cancel
                 </a>
-
             </div>
 
-            <p class="process-note">
-                Confirming recycling will update the
-                device status, record its weight and
-                disposal method, award student points,
-                and create a notification.
+            <p class="muted" style="margin-top:16px;">
+                Confirming will update the device status,
+                record the weight and disposal method,
+                award student points, and send a notification.
             </p>
-
         </form>
+    </section>
 
-    </div>
-</main>
+</div>
 
 <script>
-// Get form elements
-const recyclingForm =
-    document.getElementById('recyclingForm');
+const form = document.getElementById('recyclingForm');
+const weight = document.getElementById('weight');
+const result = document.getElementById('pointsResult');
+const button = document.getElementById('confirmButton');
 
-const weightInput =
-    document.getElementById('weight');
+const multiplier = <?= json_encode((float)$device['multiplier']) ?>;
+const maxPoints = <?= json_encode((int)$device['max_points']) ?>;
+const deviceID = <?= json_encode($device['deviceID']) ?>;
 
-const pointsResult =
-    document.getElementById('pointsResult');
-
-const confirmButton =
-    document.getElementById('confirmButton');
-
-// Values from the database
-const multiplier = <?= json_encode(
-    (float)$device['multiplier']
-) ?>;
-
-const maxPoints = <?= json_encode(
-    (int)$device['max_points']
-) ?>;
-
-// Calculate estimated points
 function calculatePoints() {
-    const weight = Number(weightInput.value);
+    const kg = Number(weight.value);
 
-    if (
-        !Number.isFinite(weight) ||
-        weight <= 0 ||
-        weight > 50
-    ) {
-        pointsResult.textContent = '0 points';
+    if (!weight.value || !Number.isFinite(kg) ||
+        kg <= 0 || kg > 50) {
+        result.textContent = '0 points';
         return;
     }
 
-    const points = Math.round(
-        Math.min(weight * multiplier, maxPoints)
+    const points = Math.min(
+        Math.round(kg * multiplier),
+        maxPoints
     );
 
-    pointsResult.textContent =
+    result.textContent =
         points.toLocaleString('en-MY') + ' points';
 }
 
-// Update points when weight changes
-weightInput.addEventListener(
-    'input',
-    calculatePoints
-);
-
-// Calculate initial preview
+weight.addEventListener('input', calculatePoints);
 calculatePoints();
 
-// Confirm before submitting
-recyclingForm.addEventListener('submit', function(event) {
-
-    if (!recyclingForm.checkValidity()) {
-        return;
-    }
+form.addEventListener('submit', function(event) {
+    if (!form.checkValidity()) return;
 
     const confirmed = confirm(
-        'Are you sure you want to recycle this device?\n\n' +
-        'Device: <?= e($device['deviceID']) ?>\n' +
-        'Weight: ' + weightInput.value + ' kg\n' +
-        'Points: ' + pointsResult.textContent + '\n\n' +
-        'This will update the database and award points.'
+        'Confirm recycling?\n\n' +
+        'Device: ' + deviceID + '\n' +
+        'Weight: ' + weight.value + ' kg\n' +
+        'Points: ' + result.textContent + '\n\n' +
+        'This action will award student points.'
     );
 
     if (!confirmed) {
@@ -336,12 +220,9 @@ recyclingForm.addEventListener('submit', function(event) {
         return;
     }
 
-    // Prevent accidental double-click submissions
-    confirmButton.disabled = true;
-    confirmButton.textContent = 'Processing...';
+    button.disabled = true;
+    button.textContent = 'Processing...';
 });
-
 </script>
 
-</body>
-</html>
+<?php require '../includes/officer_bottom.php'; ?>
