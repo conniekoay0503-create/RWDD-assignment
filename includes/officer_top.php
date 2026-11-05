@@ -8,22 +8,35 @@
  * $active = 'home';
  */
 
+// ---------- NAVIGATION ----------
 $sections = [
     'home' => [
         'Home', 'home', [
             'index.php' => ['Dashboard', 'home']
         ]
     ],
+
     'recycling' => [
-    'Recycling', 'recycle', [
-        'recycling_queue.php'      => ['Recycling Queue', 'list'],
-        'recycling_history.php'    => ['Recycling History', 'history'],
-        'recycling_statistics.php' => ['Recycling Statistics', 'chart']
-    ]
+        'Recycling', 'recycle', [
+            'recycling_queue.php' => ['Recycling Queue', 'list'],
+            'recycling_history.php' => ['Recycling History', 'history']
+        ]
     ],
+
+    'devices' => [
+        'Device Management', 'list', [
+            'abandoned_devices.php' => ['Abandoned Devices', 'clock']
+        ]
+    ],
+
+    'reports' => [
+        'Reports', 'chart', [
+            'recycling_statistics.php' => ['Recycling Statistics', 'chart']
+        ]
+    ]
 ];
 
-// Count devices awaiting recycling
+// ---------- NAVIGATION BADGES ----------
 $nav_badges = [
     'recycling' => (int) db_value(
         $conn,
@@ -33,6 +46,7 @@ $nav_badges = [
     )
 ];
 
+// ---------- NOTIFICATIONS ----------
 $unread = (int) db_value(
     $conn,
     "SELECT COUNT(*) FROM notifications
@@ -56,7 +70,15 @@ $latest = db_all(
 $this_page = basename($_SERVER['PHP_SELF']);
 $initial = strtoupper(substr($_SESSION['name'], 0, 1));
 
-// Officer page header
+// Automatically identify the active navigation section
+foreach ($sections as $key => $section) {
+    if (isset($section[2][$this_page])) {
+        $active = $key;
+        break;
+    }
+}
+
+// ---------- OFFICER PAGE HEADER ----------
 function officer_page_head(
     $icon_name,
     $title,
@@ -68,6 +90,7 @@ function officer_page_head(
     echo '<div class="page-head">';
     echo '<span class="page-icon">' .
          icon($icon_name) . '</span>';
+
     echo '<div class="page-title">';
     echo '<h1>' . e($title) . '</h1>';
 
@@ -95,6 +118,7 @@ function officer_page_head(
 
             echo '<a href="' . e($file) . '"' .
                  ($on ? ' class="active"' : '') . '>';
+
             echo icon($ico) . e($label);
             echo '</a>';
         }
@@ -129,6 +153,7 @@ function officer_page_head(
 
 <header class="topbar">
 
+    <!-- BRAND -->
     <a class="brand" href="index.php">
         <span class="brand-mark">
             <?= icon('recycle', 'icon-spin-hover') ?>
@@ -140,6 +165,7 @@ function officer_page_head(
         </span>
     </a>
 
+    <!-- NAVIGATION -->
     <nav class="pillnav" aria-label="Officer menu">
         <ul>
             <?php foreach (
@@ -181,6 +207,7 @@ function officer_page_head(
                                 <a href="<?= e($file) ?>"
                                    class="<?= $file === $this_page
                                        ? 'current' : '' ?>">
+
                                     <?= icon($sub_icon) ?>
                                     <?= e($sub_label) ?>
                                 </a>
@@ -194,8 +221,10 @@ function officer_page_head(
         </ul>
     </nav>
 
+    <!-- TOPBAR TOOLS -->
     <div class="topbar-tools">
 
+        <!-- TEXT SIZE -->
         <div class="text-size" aria-label="Text size">
             <button type="button"
                     data-text-size="-1">A-</button>
@@ -206,15 +235,18 @@ function officer_page_head(
                     data-text-size="1">A+</button>
         </div>
 
+        <!-- DARK MODE -->
         <button type="button"
                 class="icon-btn"
                 data-theme-toggle
                 aria-label="Toggle dark mode"
                 title="Dark mode">
+
             <?= icon('moon', 'theme-moon') ?>
             <?= icon('sun', 'theme-sun') ?>
         </button>
 
+        <!-- NOTIFICATIONS -->
         <div class="dropdown">
 
             <button type="button"
@@ -223,13 +255,14 @@ function officer_page_head(
                     aria-expanded="false"
                     aria-label="Notifications">
 
-                <?= icon('bell',
-                    $unread ? 'icon-ring' : '') ?>
+                <?= icon(
+                    'bell',
+                    $unread ? 'icon-ring' : ''
+                ) ?>
 
                 <?php if ($unread): ?>
                     <span class="bell-count">
-                        <?= $unread > 9
-                            ? '9+' : $unread ?>
+                        <?= $unread > 9 ? '9+' : $unread ?>
                     </span>
                 <?php endif; ?>
 
@@ -270,9 +303,15 @@ function officer_page_head(
                         </li>
                     <?php endif; ?>
                 </ul>
+                <a href="notifications.php" class="dropdown-foot">
+                    <?= icon('bell') ?>
+                    View All Notifications
+                </a>
+
             </div>
         </div>
 
+        <!-- USER ACCOUNT -->
         <div class="dropdown">
 
             <button type="button"
@@ -303,9 +342,11 @@ function officer_page_head(
                     <?= icon('home') ?>
                     Public homepage
                 </a>
+
             </div>
         </div>
 
+        <!-- LOGOUT -->
         <a class="btn btn-logout"
            href="../logout.php"
            data-confirm="Log out now?">
@@ -317,5 +358,6 @@ function officer_page_head(
     </div>
 </header>
 
+<!-- MAIN CONTENT -->
 <main class="content" id="main">
     <?php show_flash(); ?>

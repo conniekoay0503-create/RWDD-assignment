@@ -13,7 +13,15 @@ $consent = (int) db_value($conn, "SELECT COUNT(*) FROM devices WHERE status='Pen
 $recycled = (int) db_value($conn, "SELECT COUNT(*) FROM devices WHERE status='Recycled'");
 $mine = (int) db_value($conn, "SELECT COUNT(*) FROM devices WHERE status='Recycled' AND processed_by=?", 's', [$officer]);
 $weight = (float) db_value($conn, "SELECT COALESCE(SUM(weight_kg),0) FROM devices WHERE status='Recycled'");
-$points = (int) db_value($conn, "SELECT COALESCE(SUM(p.points),0) FROM points_transactions p JOIN devices d ON p.deviceID=d.deviceID WHERE p.txn_type='earn' AND d.status='Recycled'");
+$points = (int) db_value($conn, "
+    SELECT COALESCE(SUM(p.points), 0)
+    FROM points_transactions p
+    JOIN devices d ON p.deviceID = d.deviceID
+    WHERE p.txn_type = 'earn'
+      AND d.status = 'Recycled'
+      AND p.description LIKE 'Recycling reward for device %'
+");
+
 
 // Queue preview
 $queue = db_all($conn, "
@@ -172,17 +180,23 @@ require '../includes/officer_top.php';
 <div class="two-col">
     <section class="card">
         <h2 class="card-title"><?= icon('chart') ?> Recycling by Category</h2>
-        <ul class="bar-list">
-            <?php foreach ($categories as $c): ?>
-                <li>
-                    <span><?= e($c['category_name']) ?></span>
-                    <span class="bar">
-                        <span style="width: <?= round($c['total'] / $max * 100) ?>%"></span>
-                    </span>
-                    <strong><?= (int)$c['total'] ?></strong>
-                </li>
-            <?php endforeach; ?>
-        </ul>
+        
+        <?php if ($recycled === 0): ?>
+            <p class="muted">No recycling data available yet.</p>
+        <?php else: ?>
+            <ul class="bar-list">
+                <?php foreach ($categories as $c): ?>
+                    <li>
+                        <span><?= e($c['category_name']) ?></span>
+                        <span class="bar">
+                            <span style="width: <?= round($c['total'] / $max * 100) ?>%"></span>
+                        </span>
+                        <strong><?= (int)$c['total'] ?></strong>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
+
         <div class="bar-total">
             <span>All recycled devices</span>
             <strong><?= $recycled ?></strong>

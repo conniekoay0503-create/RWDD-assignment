@@ -18,6 +18,7 @@ $points = (int) db_value($conn, "
     JOIN devices d ON p.deviceID = d.deviceID
     WHERE d.status = 'Recycled'
       AND p.txn_type = 'earn'
+      AND p.description LIKE 'Recycling reward for device %'
 ");
 
 $officers = (int) db_value($conn, "
@@ -62,7 +63,7 @@ $maxMonth = max(1, ...array_map(
 ));
 
 $page_title = 'Recycling Statistics';
-$active = 'recycling';
+$active = 'reports';    
 require '../includes/officer_top.php';
 ?>
 
@@ -80,7 +81,7 @@ officer_page_head(
         ['recycle', 'tint-mint', $stats['devices'], 'Devices Recycled'],
         ['leaf', 'tint-sky', number_format((float)$stats['weight'], 2) . ' kg', 'Total Weight'],
         ['star', 'tint-gold', number_format($points), 'Points Awarded'],
-        ['users', 'tint-rose', $officers, 'Active Officers']
+        ['users', 'tint-rose', $officers, 'Officers Involved']
     ];
     ?>
 
@@ -102,8 +103,8 @@ officer_page_head(
             <?= icon('chart') ?> Recycling by Category
         </h2>
 
-        <?php if (!$categories): ?>
-            <p class="muted">No categories available.</p>
+        <?php if (!$categories || (int)$stats['devices'] === 0): ?>
+            <p class="muted">No recycling data available yet.</p>
         <?php else: ?>
             <ul class="bar-list">
                 <?php foreach ($categories as $c): ?>
