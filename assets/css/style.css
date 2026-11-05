@@ -1,51 +1,76 @@
 /*
- * style.css - one stylesheet for the whole site (no Bootstrap / frameworks).
- *  - Colours are CSS variables, so dark mode only changes the variables.
- *  - Sizes use rem, so the A- / A+ buttons (which change the <html> font size) scale everything.
- *  - One font for everything: Segoe UI (already installed on Windows, so no font files are needed).
- *    Mac / phones without Segoe UI use their own system font instead (the fallbacks after it).
+ * What is "rem"?
+ *  - rem = "root em". 1rem equals the font size of the root element <html>.
+ *  - Browsers set <html> to 16px by default, so 1rem = 16px, 0.5rem = 8px, 1.5rem = 24px.
+ *  - Why we use rem instead of px:
+ *      1. The A- / A+ buttons (main.js) change the <html> font size, e.g. to 125%.
+ *         Every rem value then grows with it (1rem becomes 20px), so the whole page scales together.
+ *      2. If a user sets a bigger default font in their browser settings (for poor eyesight),
+ *         rem follows that setting, but px would ignore it. This makes the site more accessible.
+ *  - rem vs em: em is relative to the PARENT element's font size, so it can stack up inside
+ *    nested elements; rem always looks at <html> only, so it is easier to predict.
  */
 
-/* ============ 1. Colours (light) ============ */
-:root {
-    --font-display: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;   /* headings and numbers (bold) */
-    --font-text: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;      /* normal text */
+/* 1. Colours (light)*/
+/* Define global CSS variables for the entire website */
+:root{
+    /* Font family used for headings and numbers */
+    --font-display: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif; 
+     /* Font family used for normal body text */
+     --font-text: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+     
+     --bg: #f5f9f6;
+     --surface: #ffffff;
+     --surface-2: #eff5f1;
+     --text: #1b2b22;
+     /* Secondary text color for descriptions, hints, and less important information */ 
+     --muted: #5d6e64;
+     --border: #dce7e0;
+     /* mid mint: borders, icons, bars, focus */
+     --primary: #3fb37f;
+     /* when strong text is needed we use ink */
+     --primary-dark: #1d2b24;
+     --primary-press: #74d3a6;
+     --primary-soft: #e3f7ed;
+     /* Secondary highlight colour for buttons and interactive elements */
+     --accent: #a6e7c8;     /* mint button colour */
+     --accent-hover: #8fdeb8;
+     --sun: #fde68a;        /* light yellow */
+     --sun-hover: #fbdc6a;
+     --sun-soft: #fff6d6;
+     --ink: #1d2b24;        /* text on mint / yellow */
+     --danger: #c0392b;
+     --danger-soft: #fde8e5;
+     --warn: #9a6200;
+     --warn-soft: #fdf1d4;
 
-    --bg: #f5f9f6;
-    --surface: #ffffff;
-    --surface-2: #eff5f1;
-    --text: #1b2b22;
-    --muted: #5d6e64;
-    --border: #dce7e0;
-    /* No dark green: mint is the main colour, light yellow is the second colour */
-    --primary: #3fb37f;        /* mid mint: borders, icons, bars, focus */
-    --primary-dark: #1d2b24;   /* where strong text is needed we use ink, not dark green */
-    --primary-press: #74d3a6;
-    --primary-soft: #e3f7ed;
-    --accent: #a6e7c8;         /* mint button colour */
-    --accent-hover: #8fdeb8;
-    --sun: #fde68a;            /* light yellow */
-    --sun-hover: #fbdc6a;
-    --sun-soft: #fff6d6;
-    --ink: #1d2b24;            /* text on mint / yellow */
-    --danger: #c0392b;
-    --danger-soft: #fde8e5;
-    --warn: #9a6200;
-    --warn-soft: #fdf1d4;
+     /* soft color pairs for icon circles: background / icon */
+     /* Mint: General and positive information */
+     --mint-bg: #e0f5ea;
+     --mint-fg: #2a8f61;
 
-    /* soft colour pairs for icon circles: background / icon */
-    --mint-bg: #e0f5ea;  --mint-fg: #2a8f61;
-    --sky-bg: #e2eff8;   --sky-fg: #2b6a96;
-    --gold-bg: #fcf0d2;  --gold-fg: #9a6400;
-    --rose-bg: #fbe6ec;  --rose-fg: #b23e5c;
-    --red-bg: #fde6e3;   --red-fg: #c0392b;
+     /* Sky: Informational elements */
+     --sky-bg: #e2eff8;
+     --sky-fg: #2b6a96;
 
-    --shadow: 0 1px 2px rgba(25, 60, 40, 0.06), 0 6px 18px rgba(25, 60, 40, 0.06);
-    --radius: 16px;
-    --ring: 0 0 0 4px rgba(63, 179, 127, 0.3);
+     /* Gold: Highlights and important information */
+     --gold-bg: #fcf0d2;
+     --gold-fg: #9a6400;
+
+     /* Rose: Special categories and decorative elements */
+     --rose-bg: #fbe6ec;
+     --rose-fg: #b23e5c;
+
+     /* Red: Errors and negative status indicators */
+     --red-bg: #fde6e3;
+     --red-fg: #c0392b;
+
+     --shadow: 0 1px 2px rgba(25, 60, 40, 0.06), 0 6px 18px rgba(25, 60, 40, 0.06);
+     --radius: 16px;
+     --ring: 0 0 0 4px rgba(63, 179, 127, 0.3);
 }
 
-/* Dark mode is optional (moon button). It only swaps the variables. */
+/*Dark mode is optional (moon button). It only swaps the variables. */
 [data-theme="dark"] {
     --bg: #121915;
     --surface: #1a231e;
@@ -57,6 +82,7 @@
     --primary-dark: #e4ece6;
     --primary-press: #4fb383;
     --primary-soft: #1e3a2a;
+
     --accent: #7fd6ad;
     --accent-hover: #95e0bd;
     --sun: #f3d774;
@@ -67,27 +93,48 @@
     --danger-soft: #3a201d;
     --warn: #e9b55a;
     --warn-soft: #362b15;
-    --mint-bg: #1d3a2a;  --mint-fg: #7fd3a2;
-    --sky-bg: #1a2e3d;   --sky-fg: #8cc3ea;
-    --gold-bg: #382d14;  --gold-fg: #eec26a;
-    --rose-bg: #3a1f28;  --rose-fg: #f0a3b8;
-    --red-bg: #3a201d;   --red-fg: #ef8174;
+
+    --mint-bg: #1d3a2a;  
+    --mint-fg: #7fd3a2;
+
+    --sky-bg: #1a2e3d;   
+    --sky-fg: #8cc3ea;
+
+    --gold-bg: #382d14;  
+    --gold-fg: #eec26a;
+
+    --rose-bg: #3a1f28;  
+    --rose-fg: #f0a3b8;
+
+    --red-bg: #3a201d;   
+    --red-fg: #ef8174;
+
     --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
     --ring: 0 0 0 4px rgba(91, 184, 130, 0.3);
 }
 
-/* ============ 2. Base ============ */
-* { box-sizing: border-box; }
-[hidden] { display: none !important; }   /* "hidden" must win over the display rules below */
+/* 2. Base */
+/* Apply border-box sizing to all elements */
+* { 
+    box-sizing: border-box;
+}
 
+/* Ensure hidden elements stay hidden regardless of other display rules */
+[hidden] { 
+    /* Completely hide the element */
+    display: none !important;
+}   /* "hidden" must win over the display rules below */
+
+/* The whole page: font, text colour and background (every element inherits the font from here) */
 body {
     margin: 0;
     font-family: var(--font-text);
     font-size: 1rem;
     line-height: 1.55;
-    background: var(--bg);
     color: var(--text);
+    background: var(--bg);
 }
+
 h1, h2, h3 { font-family: var(--font-display); line-height: 1.2; letter-spacing: -0.01em; margin: 0 0 0.6rem; }
 h1 { font-size: 1.75rem; font-weight: 800; }
 h2 { font-size: 1.2rem; font-weight: 700; }
@@ -108,10 +155,27 @@ button, input, select, textarea { font: inherit; color: inherit; }
     fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
 }
 
-.skip-link { position: absolute; left: -999px; top: 0.5rem; background: var(--accent); color: var(--ink); padding: 0.5rem 1rem; border-radius: 8px; z-index: 100; }
-.skip-link:focus { left: 0.5rem; }
+/* skip-link: Allow keyboard users to skip navigation and jump directly to the main content. */
+.skip-link {
+    /* Position the skip link independently from the normal page layout */
+    position: absolute;
+    /* Move the skip link off-screen until it receives keyboard focus */
+    left: -999px;
+    top: 0.5rem;
+    /* Apply the accent colour as the link background */
+    background: var(--accent);
+    color: var(--ink);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    z-index: 100;
+}
 
-/* ============ 3. Buttons ============ */
+/* Bring the skip link into view when it receives focus */
+.skip-link:focus {
+    left: 0.5rem;
+}
+
+/* 3. Button */
 /* Every button has 3 clear states: normal, hover (mouse over) and active (while being clicked). */
 .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem;
@@ -121,7 +185,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
     cursor: pointer; white-space: nowrap;
     transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.08s, box-shadow 0.15s;
 }
-.btn:active { transform: scale(0.95); box-shadow: var(--ring); }
+.btn:active {
+    transform: scale(0.95);
+    box-shadow: var(--ring);
+}
 
 .btn-primary { background: var(--accent); color: var(--ink); }
 .btn-primary:hover { background: var(--accent-hover); color: var(--ink); }
@@ -158,6 +225,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .btn-icon.danger:active { background: var(--danger-soft); }
 .icon-btn .icon, .btn-icon .icon { width: 1.15rem; height: 1.15rem; }
 
+
 .link-btn { display: inline-flex; align-items: center; gap: 0.3rem; border: 0; background: none; color: var(--text); font-size: 0.84rem; font-weight: 600; cursor: pointer; padding: 0.2rem 0.3rem; border-radius: 6px; }
 .link-btn:hover { text-decoration: underline; }
 .link-btn:active { background: var(--primary-soft); }
@@ -171,7 +239,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 [data-theme="dark"] .theme-sun { display: inline; }
 [data-theme="dark"] .theme-moon { display: none; }
 
-/* ============ 4. Forms ============ */
+/* 4. Forms */
 .field { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 1rem; flex: 1; min-width: 0; }
 .field label { display: flex; align-items: center; gap: 0.4rem; font-weight: 600; font-size: 0.9rem; }
 .field label .icon { color: var(--primary); }
@@ -241,7 +309,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--primary); outlin
 
 input[type="range"] { width: 100%; accent-color: var(--primary); margin-top: 0.4rem; }
 
-/* ============ 5. Alerts, badges, small labels ============ */
+/* 5. Alerts, badges, small labels */
 .alert { display: flex; align-items: flex-start; gap: 0.6rem; padding: 0.8rem 1rem; border-radius: 12px; margin-bottom: 1rem; font-size: 0.93rem; animation: alert-in 0.3s ease-out; }
 .alert .icon { margin-top: 0.15rem; }
 .alert ul { margin: 0; padding-left: 1.2rem; }
@@ -268,7 +336,7 @@ input[type="range"] { width: 100%; accent-color: var(--primary); margin-top: 0.4
 .status-submitted, .status-dropped-off { background: var(--sky-bg); color: var(--sky-fg); }
 .status-claimed, .status-in-repair { background: var(--gold-bg); color: var(--gold-fg); }
 .status-ready-for-collection, .status-completed { background: var(--mint-bg); color: var(--mint-fg); }
-.status-pending-consent, .status-returned-unrepaired { background: var(--red-bg); color: var(--red-fg); }
+.status-pending-consent, .status-return-requested, .status-returned-unrepaired { background: var(--red-bg); color: var(--red-fg); }
 .status-awaiting-recycle, .status-recycled { background: #e3f3f1; color: #23736a; }
 [data-theme="dark"] .status-awaiting-recycle, [data-theme="dark"] .status-recycled { background: #183330; color: #74c7b7; }
 
@@ -293,7 +361,7 @@ input[type="range"] { width: 100%; accent-color: var(--primary); margin-top: 0.4
 .avatar.small:hover { box-shadow: none; }
 .avatar.small .icon { width: 1rem; height: 1rem; }
 
-/* ============ 6. Top bar + navigation bar (admin) ============ */
+/* 6. Top bar + navigation bar (admin) */
 .topbar {
     position: sticky; top: 0; z-index: 40;
     display: flex; align-items: center; gap: 1rem;
@@ -405,7 +473,7 @@ body.app {
 .content { max-width: 1280px; margin: 0 auto; padding: 1.75rem 1.5rem 3rem; min-height: calc(100vh - 12rem); }
 .site-footer { text-align: center; padding: 1.3rem; font-size: 0.82rem; color: var(--muted); border-top: 1px solid var(--border); }
 
-/* ============ 7. Page header, tabs, cards ============ */
+/* 7. Page header, tabs, cards */
 .page-head { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.1rem; flex-wrap: wrap; }
 .page-icon { display: grid; place-items: center; width: 3.1rem; height: 3.1rem; border-radius: 16px; background: linear-gradient(135deg, var(--accent), var(--sun)); color: var(--ink); box-shadow: 0 6px 16px -8px rgba(63, 179, 127, 0.5); }
 .page-icon .icon { width: 1.5rem; height: 1.5rem; }
@@ -540,7 +608,7 @@ td form { margin: 0; }
 .name-cell { display: inline-flex; align-items: center; gap: 0.6rem; font-weight: 600; }
 .empty-msg { text-align: center; padding: 1rem; margin: 0; }
 
-/* ============ 8. Card grids (categories, challenges, cashback, rewards, requests, posts) ============ */
+/* 8. Card grids (categories, challenges, cashback, rewards, requests, posts) */
 .tile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr)); gap: 1.25rem; margin-bottom: 1.25rem; }
 .tile-grid.small { grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); }
 .cat-card, .challenge-tile, .request-card, .reward-tile, .post-card {
@@ -659,7 +727,7 @@ blockquote { margin: 0; padding: 0.7rem 0.95rem; border-left: 4px solid var(--pr
 .placeholder { max-width: 30rem; margin: 5rem auto; text-align: center; }
 .role-tag { display: inline-block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; color: var(--primary); background: var(--primary-soft); padding: 0.15rem 0.55rem; border-radius: 6px; }
 
-/* ============ 9. Animated icons (switched off for people who prefer less motion) ============ */
+/* 9. Animated icons (switched off for people who prefer less motion) */
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes ring { 0%, 100% { transform: rotate(0); } 5%, 15% { transform: rotate(14deg); } 10%, 20% { transform: rotate(-14deg); } 25% { transform: rotate(0); } }
 @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
@@ -672,7 +740,7 @@ blockquote { margin: 0; padding: 0.7rem 0.95rem; border-left: 4px solid var(--pr
     *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 
-/* ============ 10. Public pages: homepage, login, register (light colours) ============ */
+/* 10. Public pages: homepage, login, register (light colours) */
 :root {
     --pub-gradient: url("../img/circuit-green.svg"),
                     radial-gradient(ellipse at 88% 10%, rgba(253, 230, 138, 0.5), transparent 45%),
@@ -798,7 +866,7 @@ body.auth { min-height: 100vh; background: var(--pub-gradient); }
 .hint { display: flex; gap: 0.5rem; font-size: 0.86rem; color: var(--muted); background: var(--surface-2); padding: 0.75rem 0.9rem; border-radius: 12px; margin-top: 1rem; }
 .hint .icon { color: var(--primary); margin-top: 0.1rem; }
 
-/* ============ 11. Responsive ============ */
+/* 11. Responsive */
 @media (max-width: 1280px) {
     .topbar .text-size { display: none; }
     .brand small { display: none; }
@@ -857,7 +925,7 @@ body.auth { min-height: 100vh; background: var(--pub-gradient); }
     h1 { font-size: 1.5rem; }
 }
 
-/* ============ 12. Print (Reports → Print / Save as PDF) ============ */
+/* 12. Print (Reports → Print / Save as PDF) */
 @media print {
     .topbar, .site-footer, .no-print, .skip-link, .alert, .page-head, .subtabs { display: none !important; }
     body, body.app { background: #fff; color: #000; font-size: 11pt; }

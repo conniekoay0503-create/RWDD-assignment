@@ -1,0 +1,55 @@
+/*
+ * volunteer.css - ONLY what the team's style.css does not have, for the Volunteer pages.
+ * Loaded after style.css. Every class starts with "v-" so it cannot clash with a teammate's class.
+ * It uses the team's colour variables, so dark mode works automatically.
+ */
+
+/* ---- Status / badge colours the shared file does not have ---- */
+.status-returned-unclaimed { background: var(--surface-2); color: var(--muted); }
+.badge-urgent { background: var(--red-bg); color: var(--red-fg); }
+
+/* ---- Device photo (square box; shows an icon when there is no photo) ---- */
+.v-thumb { width: 4rem; height: 4rem; flex-shrink: 0; border-radius: 12px; overflow: hidden; background: var(--primary-soft); color: var(--primary); display: grid; place-items: center; }
+.v-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.v-thumb .icon { width: 1.8rem; height: 1.8rem; }
+.v-thumb-big { width: 100%; height: 11rem; border-radius: 16px; margin-bottom: 0.5rem; }
+.v-thumb-big .icon { width: 3rem; height: 3rem; }
+
+/* ---- Repair queue cards ---- */
+.v-card { display: flex; flex-direction: column; gap: 0.7rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.1rem 1.25rem; box-shadow: var(--shadow); }
+.v-card h2 { font-size: 1.1rem; margin: 0 0 0.15rem; overflow-wrap: anywhere; }
+.v-card footer { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-top: auto; padding-top: 0.6rem; border-top: 1px solid var(--border); }
+.v-device-top { display: flex; align-items: center; gap: 0.85rem; }
+
+/* ---- My jobs ---- */
+.v-job-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1rem; }
+.v-job-head h2 { font-size: 1.35rem; margin: 0.15rem 0 0.4rem; overflow-wrap: anywhere; }
+.v-job-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 1.5rem; }
+.v-note { background: var(--sun-soft); border-radius: 12px; padding: 0.6rem 0.85rem; margin-bottom: 0.5rem; }
+.v-note p { margin: 0 0 0.15rem; overflow-wrap: anywhere; }
+.v-note-form { margin-top: 0.75rem; }
+.v-note-form textarea { width: 100%; }
+
+/* ---- Points ---- */
+.v-num { text-align: right; white-space: nowrap; }
+.v-neg { color: var(--danger); }
+
+/* ---- Challenge: one bar split into "you" and "everyone else" + leaderboard ---- */
+.v-multibar { display: flex; height: 0.9rem; border-radius: 999px; overflow: hidden; background: var(--surface-2); }
+.v-seg-me { background: var(--primary); }
+.v-seg-others { background: var(--sun-hover); }
+.v-legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem; margin: 0.6rem 0 0; color: var(--muted); font-size: 0.9rem; }
+.v-dot { display: inline-block; width: 0.7rem; height: 0.7rem; border-radius: 50%; margin-right: 0.3rem; }
+.v-dot-me { background: var(--primary); }
+.v-dot-others { background: var(--sun-hover); }
+.v-leaders { list-style: none; margin: 0.5rem 0 0; padding: 0; display: grid; gap: 0.25rem; }
+.v-leaders li { display: flex; align-items: center; gap: 0.9rem; padding: 0.55rem 0.75rem; border-radius: 12px; }
+.v-leaders li.you { background: var(--primary-soft); font-weight: 600; }
+.v-who { flex: 1; overflow-wrap: anywhere; }
+.v-rank { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; background: var(--surface-2); font-weight: 700; }
+.v-leaders li:nth-child(1) .v-rank { background: var(--sun); color: var(--ink); }
+
+@media (max-width: 720px) {
+    .v-job-body { grid-template-columns: 1fr; }
+    .v-job-head { flex-direction: column; }
+}
