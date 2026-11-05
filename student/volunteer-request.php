@@ -65,13 +65,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
             }
 
+            $requestID = next_id($conn, 'volunteer_request', 'requestID', 'VR');
             db_exec(
                 $conn,
                 "INSERT INTO volunteer_request
-                 (tp_number, reason, status)
-                 VALUES (?, ?, 'pending')",
-                'ss',
-                [$studentTP, $reason]
+                 (requestID, tp_number, reason, status)
+                 VALUES (?, ?, ?, 'pending')",
+                'sss',
+                [$requestID, $studentTP, $reason]
             );
 
             $user = db_one(
@@ -128,29 +129,21 @@ $hasPending = $latestRequest &&
     $latestRequest['status'] === 'pending';
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Become a Volunteer | E-Waste &amp; Repair Café</title>
-    <link rel="stylesheet" href="../assets/css/style.css">
-</head>
+<?php $page_title = 'Become a Volunteer'; require '../includes/student_top.php'; ?>
+<div class="student-page-head"><span class="page-icon"><?= icon('heart') ?></span><div><span class="student-eyebrow">STUDENT PORTAL</span><h1>Become a Volunteer</h1><p>Manage your e-waste journey in one place.</p></div></div>
+<section class="card student-panel">
 
-<body class="public">
-
-<main style="max-width: 850px; margin: 40px auto; padding: 20px;">
 
     <a href="index.php">← Back to Dashboard</a>
 
-    <h1>Become a Repair Volunteer</h1>
+    
 
     <p>
         Interested in repairing electronic devices?
         Apply to join our Repair Volunteer team.
     </p>
 
-    <?php show_flash(); ?>
+    
 
     <?php if ($error !== ''): ?>
         <p role="alert" style="color: #b42318;">
@@ -225,7 +218,6 @@ $hasPending = $latestRequest &&
 
     <?php endif; ?>
 
-</main>
 
-</body>
-</html>
+</section>
+<?php require '../includes/student_bottom.php'; ?>

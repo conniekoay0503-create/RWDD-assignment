@@ -9,11 +9,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $studentTP = $_SESSION['tp_number'];
-$rewardID = filter_input(INPUT_POST, 'rewardID', FILTER_VALIDATE_INT);
+$rewardID = trim((string) ($_POST['rewardID'] ?? ''));
 $csrfToken = $_POST['csrf_token'] ?? '';
 
 if (
-    !$rewardID ||
+    !preg_match('/^RW[0-9]{3,8}$/', $rewardID) ||
     !is_string($csrfToken) ||
     empty($_SESSION['redeem_csrf']) ||
     !hash_equals($_SESSION['redeem_csrf'], $csrfToken)
@@ -48,7 +48,7 @@ try {
          FROM rewards
          WHERE rewardID = ?
          FOR UPDATE",
-        'i',
+        's',
         [$rewardID]
     );
 
@@ -78,13 +78,15 @@ try {
         );
     }
 
+    // Stock is reserved on submission and released if Admin rejects.
+    // Admin must NOT deduct stock a second time on approval.
     // Conditional stock decrement.
     $affected = db_exec(
         $conn,
         "UPDATE rewards
          SET stock = stock - 1
          WHERE rewardID = ? AND stock > 0",
-        'i',
+        's',
         [$rewardID]
     );
 
@@ -93,13 +95,16 @@ try {
     }
 
     // Create the pending redemption request.
+    $redemptionID = next_id($conn, 'redemptions', 'redemptionID', 'R');
+    $transactionID = next_id($conn, 'points_transactions', 'transactionID', 'T');
     db_exec(
         $conn,
         "INSERT INTO redemptions
-         (tp_number, rewardID, points_used, cash_value, status)
-         VALUES (?, ?, ?, ?, 'pending')",
-        'siid',
+         (redemptionID, tp_number, rewardID, points_used, cash_value, status)
+         VALUES (?, ?, ?, ?, ?, 'pending')",
+        'sssid',
         [
+            $redemptionID,
             $studentTP,
             $rewardID,
             $pointsRequired,
@@ -107,16 +112,16 @@ try {
         ]
     );
 
-    $redemptionID = $conn->insert_id;
 
     // Record the negative points transaction.
     db_exec(
         $conn,
         "INSERT INTO points_transactions
-         (tp_number, redemptionID, points, txn_type, description)
-         VALUES (?, ?, ?, 'redeem', ?)",
-        'siis',
+         (transactionID, tp_number, redemptionID, points, txn_type, description)
+         VALUES (?, ?, ?, ?, 'redeem', ?)",
+        'sssis',
         [
+            $transactionID,
             $studentTP,
             $redemptionID,
             -$pointsRequired,

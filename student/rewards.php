@@ -54,28 +54,18 @@ $transactions = db_all(
 );
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<?php $page_title = 'Points & Cashback'; require '../includes/student_top.php'; ?>
+<div class="student-page-head"><span class="page-icon"><?= icon('wallet') ?></span><div><span class="student-eyebrow">STUDENT PORTAL</span><h1>Points &amp; Cashback</h1><p>Manage your e-waste journey in one place.</p></div></div>
+<section class="card student-panel">
 
-    <title>Points &amp; Cashback | E-Waste &amp; Repair Café</title>
-
-    <link rel="stylesheet" href="../assets/css/style.css">
-</head>
-
-<body class="public">
-
-<main style="max-width: 950px; margin: 40px auto; padding: 20px;">
 
     <a href="index.php">← Back to Dashboard</a>
 
-    <h1>Points &amp; Cashback</h1>
+    
 
     <p>Earn points by participating in e-waste repair and recycling.</p>
 
-    <?php show_flash(); ?>
+    
 
     <section>
         <h2>My Points Balance</h2>
@@ -152,7 +142,7 @@ $transactions = db_all(
                         <input
                             type="hidden"
                             name="rewardID"
-                            value="<?= (int) $reward['rewardID'] ?>"
+                            value="<?= e($reward['rewardID']) ?>"
                         >
 
                         <button
@@ -269,7 +259,6 @@ $transactions = db_all(
         <?php endif; ?>
     </section>
 
-</main>
 
-</body>
-</html>
+</section>
+<?php require '../includes/student_bottom.php'; ?>

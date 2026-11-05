@@ -40,74 +40,18 @@ $inRepair = db_value(
     [$studentTP]
 );
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student | E-Waste &amp; Repair Café</title>
-    <link rel="stylesheet" href="../assets/css/style.css">
-    <script src="../assets/js/main.js" defer></script>
-</head>
-<body class="public">
-<main class="placeholder card">
-
-    <span class="role-tag">STUDENT</span>
-
-    <h1>Welcome, <?= e($_SESSION['name']) ?>!</h1>
-
-    <h2>My Dashboard</h2>
-
-    <section>
-        <h3>My Points</h3>
-        <p><?= (int) $totalPoints ?> points</p>
-    </section>
-
-    <section>
-        <h3>Devices Submitted</h3>
-        <p><?= (int) $totalDevices ?> devices</p>
-    </section>
-
-    <section>
-        <h3>Devices In Repair</h3>
-        <p><?= (int) $inRepair ?> devices</p>
-    </section>
-
-    <a class="btn btn-primary" href="submit-device.php">
-        Submit a Device
-    </a>
-    <a class="btn btn-primary" href="my-devices.php">
-        My Devices
-    </a>
-
-    <a class="btn btn-primary" href="rewards.php">
-        Points &amp; Cashback
-    </a>
-
-    <a class="btn btn-primary" href="challenges.php">
-        Challenges &amp; Leaderboard
-    </a>
-
-    <a class="btn btn-primary" href="volunteer-request.php">
-        Become a Volunteer
-    </a>
-
-    <a class="btn btn-primary" href="feedback.php">
-        Feedback
-    </a>
-
-    <a class="btn btn-primary" href="notifications.php">
-        Notifications &amp; Announcements
-    </a>
-
-    <a class="btn btn-primary" href="report.php">
-        My Report
-    </a>
-
-    <a class="btn btn-primary" href="../logout.php">
-        Log out
-    </a>
-
-</main>
-</body>
-</html>
+<?php $page_title = 'Dashboard'; require '../includes/student_top.php'; ?>
+<section class="hero-card student-hero"><div class="hero-card-text"><span class="student-eyebrow">STUDENT DASHBOARD</span><h1>Welcome, <?= e(explode(' ', $_SESSION['name'])[0]) ?>!</h1><p class="serif-line">Give your electronics a second life. Track repairs, earn points and make an impact.</p></div><div class="hero-actions"><a class="btn btn-primary" href="submit-device.php"><?= icon('plus') ?> Submit a device</a><a class="btn btn-sun" href="my-devices.php"><?= icon('device') ?> Track my devices</a></div><span class="hero-art" aria-hidden="true"><?= icon('recycle') ?></span></section>
+<h2 class="section-title"><?= icon('chart') ?> Your impact at a glance</h2>
+<section class="stat-grid three">
+<a class="stat-card" href="rewards.php"><span class="stat-icon tint-gold"><?= icon('star') ?></span><strong class="stat-value"><?= number_format((int) $totalPoints) ?></strong><span class="stat-title">Available points</span><small>Redeem cashback rewards</small></a>
+<a class="stat-card" href="my-devices.php"><span class="stat-icon tint-mint"><?= icon('device') ?></span><strong class="stat-value"><?= (int) $totalDevices ?></strong><span class="stat-title">Devices submitted</span><small>View your device history</small></a>
+<a class="stat-card" href="my-devices.php"><span class="stat-icon tint-sky"><?= icon('wrench') ?></span><strong class="stat-value"><?= (int) $inRepair ?></strong><span class="stat-title">Currently in repair</span><small>Follow their progress</small></a>
+</section>
+<h2 class="section-title"><?= icon('home') ?> Quick access</h2>
+<section class="student-quick-grid">
+<?php foreach ([['rewards.php','gift','Points & Cashback','Use your points for rewards'],['challenges.php','flag','Challenges','Join sustainability challenges'],['volunteer-request.php','heart','Become a Volunteer','Apply to help repair devices'],['feedback.php','message','Feedback','Share your experience'],['notifications.php','bell','Notifications','Read messages and announcements'],['report.php','chart','My Report','See your personal impact']] as [$url,$ico,$name,$desc]): ?>
+<a href="<?= e($url) ?>" class="card student-quick"><span class="stat-icon tint-mint"><?= icon($ico) ?></span><span><strong><?= e($name) ?></strong><small><?= e($desc) ?></small></span><?= icon('arrow-right') ?></a>
+<?php endforeach; ?>
+</section>
+<?php require '../includes/student_bottom.php'; ?>

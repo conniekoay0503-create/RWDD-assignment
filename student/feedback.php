@@ -24,16 +24,13 @@ $devices = db_all(
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $token = $_POST['csrf_token'] ?? '';
-    $deviceID = filter_var(
-        $_POST['deviceID'] ?? null,
-        FILTER_VALIDATE_INT
-    );
+    $deviceID = trim((string) ($_POST['deviceID'] ?? ''));
     $message = trim($_POST['message'] ?? '');
 
     if (!is_string($token) ||
         !hash_equals($_SESSION['feedback_csrf'], $token)) {
         $error = 'Invalid request. Please refresh the page.';
-    } elseif (!$deviceID) {
+    } elseif (!preg_match('/^D[0-9]{3,9}$/', $deviceID)) {
         $error = 'Please select a device.';
     } elseif ($message === '' || mb_strlen($message) > 255) {
         $error = 'Feedback must be between 1 and 255 characters.';
@@ -43,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             "SELECT deviceID, device_name
              FROM devices
              WHERE deviceID = ? AND submitted_by = ?",
-            'is',
+            'ss',
             [$deviceID, $studentTP]
         );
 
@@ -53,13 +50,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $conn->begin_transaction();
 
+                $feedbackID = next_id($conn, 'feedback', 'feedbackID', 'F');
                 db_exec(
                     $conn,
                     "INSERT INTO feedback
-                     (tp_number, deviceID, message)
-                     VALUES (?, ?, ?)",
-                    'sis',
-                    [$studentTP, $deviceID, $message]
+                     (feedbackID, tp_number, deviceID, message)
+                     VALUES (?, ?, ?, ?)",
+                    'ssss',
+                    [$feedbackID, $studentTP, $deviceID, $message]
                 );
 
                 $user = db_one(
@@ -118,28 +116,20 @@ $feedbackList = db_all(
 );
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Feedback | E-Waste &amp; Repair Café</title>
-    <link rel="stylesheet" href="../assets/css/style.css">
-</head>
+<?php $page_title = 'Feedback'; require '../includes/student_top.php'; ?>
+<div class="student-page-head"><span class="page-icon"><?= icon('message') ?></span><div><span class="student-eyebrow">STUDENT PORTAL</span><h1>Feedback</h1><p>Manage your e-waste journey in one place.</p></div></div>
+<section class="card student-panel">
 
-<body class="public">
-
-<main style="max-width: 900px; margin: 40px auto; padding: 20px;">
 
     <a href="index.php">← Back to Dashboard</a>
 
-    <h1>Student Feedback</h1>
+    
     <p>
         Share your experience or ask a question
         about one of your submitted devices.
     </p>
 
-    <?php show_flash(); ?>
+    
 
     <?php if ($error !== ''): ?>
         <p role="alert" style="color: #b42318;">
@@ -171,7 +161,7 @@ $feedbackList = db_all(
 
                     <?php foreach ($devices as $device): ?>
                         <option
-                            value="<?= (int) $device['deviceID'] ?>"
+                            value="<?= e($device['deviceID']) ?>"
                             <?= (string) ($_POST['deviceID'] ?? '') ===
                                 (string) $device['deviceID']
                                 ? 'selected' : '' ?>
@@ -275,7 +265,6 @@ $feedbackList = db_all(
 
     <?php endif; ?>
 
-</main>
 
-</body>
-</html>
+</section>
+<?php require '../includes/student_bottom.php'; ?>

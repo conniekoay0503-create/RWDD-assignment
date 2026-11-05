@@ -5,9 +5,9 @@ require '../includes/functions.php';
 require_role($conn, 'student', '../');
 
 $studentTP = $_SESSION['tp_number'];
-$deviceID = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+$deviceID = trim((string) ($_GET['id'] ?? ''));
 
-if (!$deviceID || $deviceID < 1) {
+if (!preg_match('/^D[0-9]{3,9}$/', $deviceID)) {
     http_response_code(400);
     exit('Invalid device ID.');
 }
@@ -27,7 +27,7 @@ $device = db_one(
      FROM devices d
      JOIN categories c ON d.categoryID = c.categoryID
      WHERE d.deviceID = ? AND d.submitted_by = ?",
-    'is',
+    'ss',
     [$deviceID, $studentTP]
 );
 
@@ -54,8 +54,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ],
         'request_return' => [
             'from' => 'Pending Consent',
-            'to' => 'Returned Unrepaired',
-            'remark' => 'Student requested device return.'
+            'to' => 'Return Requested',
+            'remark' => 'Student requested device return; awaiting volunteer drop-off at Green Hub.'
         ],
         'collect_repaired' => [
             'from' => 'Ready for Collection',
@@ -86,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "SELECT status FROM devices
                  WHERE deviceID = ? AND submitted_by = ?
                  FOR UPDATE",
-                'is',
+                'ss',
                 [$deviceID, $studentTP]
             );
 
@@ -115,7 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                  WHERE deviceID = ?
                    AND submitted_by = ?
                    AND status = ?",
-                'siiss',
+                'sisss',
                 [
                     $newStatus,
                     $consent,
@@ -131,13 +131,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
             }
 
+            $historyID = next_id($conn, 'device_status_history', 'historyID', 'H');
             db_exec(
                 $conn,
                 "INSERT INTO device_status_history
-                 (deviceID, changed_by, new_status, remarks)
-                 VALUES (?, ?, ?, ?)",
-                'isss',
+                 (historyID, deviceID, changed_by, new_status, remarks)
+                 VALUES (?, ?, ?, ?, ?)",
+                'sssss',
                 [
+                    $historyID,
                     $deviceID,
                     $studentTP,
                     $newStatus,
@@ -167,7 +169,7 @@ $device = db_one(
      FROM devices d
      JOIN categories c ON d.categoryID = c.categoryID
      WHERE d.deviceID = ? AND d.submitted_by = ?",
-    'is',
+    'ss',
     [$deviceID, $studentTP]
 );
 
@@ -177,7 +179,7 @@ $history = db_all(
      FROM device_status_history
      WHERE deviceID = ?
      ORDER BY changed_at DESC, historyID DESC",
-    'i',
+    's',
     [$deviceID]
 );
 
@@ -192,24 +194,18 @@ $photoValid = is_string($photoPath) &&
 
 $photoURL = $photoValid ? '../' . $photoPath : null;
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Device Details | E-Waste &amp; Repair Café</title>
-    <link rel="stylesheet" href="../assets/css/style.css">
-</head>
 
-<body class="public">
+?>
+<?php $page_title = 'Device Details'; require '../includes/student_top.php'; ?>
+<div class="student-page-head"><span class="page-icon"><?= icon('device') ?></span><div><span class="student-eyebrow">STUDENT PORTAL</span><h1>Device Details</h1><p>Manage your e-waste journey in one place.</p></div></div>
+<section class="card student-panel">
 
-<main style="max-width: 850px; margin: 40px auto; padding: 20px;">
 
     <a href="my-devices.php">← Back to My Devices</a>
 
-    <h1><?= e($device['device_name']) ?></h1>
+    
 
-    <?php show_flash(); ?>
+    
 
     <?php if ($error !== ''): ?>
         <p role="alert" style="color: #b42318;">
@@ -230,7 +226,7 @@ $photoURL = $photoValid ? '../' . $photoPath : null;
     <?php endif; ?>
 
     <p><strong>Device ID:</strong>
-        #<?= (int) $device['deviceID'] ?></p>
+        #<?= e($device['deviceID']) ?></p>
 
     <p><strong>Category:</strong>
         <?= e($device['category_name']) ?></p>
@@ -265,6 +261,10 @@ $photoURL = $photoValid ? '../' . $photoPath : null;
     if ($status === 'Ready for Collection') {
         $availableActions['collect_repaired'] =
             'Confirm Repaired Device Collection';
+    }
+
+    if ($status === 'Return Requested') {
+        echo '<p class="alert alert-info">Your return has been requested. Please wait until the volunteer brings your device to the Green Hub before collecting it.</p>';
     }
 
     if ($status === 'Returned Unrepaired') {
@@ -333,7 +333,6 @@ $photoURL = $photoValid ? '../' . $photoPath : null;
         </table>
     <?php endif; ?>
 
-</main>
 
-</body>
-</html>
+</section>
+<?php require '../includes/student_bottom.php'; ?>

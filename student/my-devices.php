@@ -25,20 +25,12 @@ $devices = db_all(
 );
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Devices | E-Waste &amp; Repair Café</title>
-    <link rel="stylesheet" href="../assets/css/style.css">
-</head>
+<?php $page_title = 'My Devices'; require '../includes/student_top.php'; ?>
+<div class="student-page-head"><span class="page-icon"><?= icon('device') ?></span><div><span class="student-eyebrow">STUDENT PORTAL</span><h1>My Devices</h1><p>Manage your e-waste journey in one place.</p></div></div>
+<section class="card student-panel">
 
-<body class="public">
 
-<main style="max-width: 950px; margin: 40px auto; padding: 20px;">
-
-    <h1>My Devices</h1>
+    
     <p>Track your submitted devices and repair progress.</p>
 
     <p>
@@ -94,7 +86,7 @@ $devices = db_all(
                             <td>
                                 <a
                                     class="btn btn-primary"
-                                    href="device-details.php?id=<?= (int) $device['deviceID'] ?>"
+                                    href="device-details.php?id=<?= e($device['deviceID']) ?>"
                                 >
                                     View Details
                                 </a>
@@ -108,7 +100,6 @@ $devices = db_all(
 
     <?php endif; ?>
 
-</main>
 
-</body>
-</html>
+</section>
+<?php require '../includes/student_bottom.php'; ?>

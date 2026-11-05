@@ -15,17 +15,14 @@ if (empty($_SESSION['notifications_csrf'])) {
 // Handle marking a notification as read.
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $token = $_POST['csrf_token'] ?? '';
-    $notificationID = filter_var(
-        $_POST['notificationID'] ?? null,
-        FILTER_VALIDATE_INT
-    );
+    $notificationID = trim((string) ($_POST['notificationID'] ?? ''));
 
     if (
         !is_string($token) ||
         !hash_equals($_SESSION['notifications_csrf'], $token)
     ) {
         $error = 'Invalid request. Please refresh the page.';
-    } elseif (!$notificationID || $notificationID < 1) {
+    } elseif (!preg_match('/^N[0-9]{3,9}$/', $notificationID)) {
         $error = 'Invalid notification.';
     } else {
         try {
@@ -38,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                  WHERE notificationID = ?
                    AND tp_number = ?
                    AND is_read = 0",
-                'is',
+                'ss',
                 [$notificationID, $studentTP]
             );
 
@@ -92,31 +89,21 @@ $announcements = db_all(
 );
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<?php $page_title = 'Notifications & Announcements'; require '../includes/student_top.php'; ?>
+<div class="student-page-head"><span class="page-icon"><?= icon('bell') ?></span><div><span class="student-eyebrow">STUDENT PORTAL</span><h1>Notifications &amp; Announcements</h1><p>Manage your e-waste journey in one place.</p></div></div>
+<section class="card student-panel">
 
-    <title>Notifications &amp; Announcements | E-Waste &amp; Repair Café</title>
-
-    <link rel="stylesheet" href="../assets/css/style.css">
-</head>
-
-<body class="public">
-
-<main style="max-width: 900px; margin: 40px auto; padding: 20px;">
 
     <a href="index.php">← Back to Dashboard</a>
 
-    <h1>Notifications &amp; Announcements</h1>
+    
 
     <p>
         Stay updated about your devices, rewards,
         volunteer applications and campus activities.
     </p>
 
-    <?php show_flash(); ?>
+    
 
     <?php if ($error !== ''): ?>
         <p role="alert" style="color: #b42318;">
@@ -182,7 +169,7 @@ $announcements = db_all(
                             <input
                                 type="hidden"
                                 name="notificationID"
-                                value="<?= (int) $notification['notificationID'] ?>"
+                                value="<?= e($notification['notificationID']) ?>"
                             >
 
                             <button type="submit" class="btn btn-primary">
@@ -250,7 +237,6 @@ $announcements = db_all(
 
     </section>
 
-</main>
 
-</body>
-</html>
+</section>
+<?php require '../includes/student_bottom.php'; ?>

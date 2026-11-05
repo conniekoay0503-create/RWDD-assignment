@@ -17,10 +17,7 @@ $categories = db_all(
 );
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $categoryID = filter_var(
-        $_POST['categoryID'] ?? null,
-        FILTER_VALIDATE_INT
-    );
+    $categoryID = trim((string) ($_POST['categoryID'] ?? ''));
     $deviceName = trim($_POST['device_name'] ?? '');
     $faultDescription = trim($_POST['fault_description'] ?? '');
     $termsAccepted = isset($_POST['terms_accepted']);
@@ -28,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Server-side validation
     $validCategory = false;
     foreach ($categories as $category) {
-        if ((int) $category['categoryID'] === $categoryID) {
+        if ($category['categoryID'] === $categoryID) {
             $validCategory = true;
             break;
         }
@@ -91,14 +88,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $conn->begin_transaction();
 
+                $deviceID = next_id($conn, 'devices', 'deviceID', 'D');
+                $historyID = next_id($conn, 'device_status_history', 'historyID', 'H');
                 db_exec(
                     $conn,
                     "INSERT INTO devices
-                     (submitted_by, categoryID, device_name,
+                     (deviceID, submitted_by, categoryID, device_name,
                       fault_description, photo_path, terms_accepted)
-                     VALUES (?, ?, ?, ?, ?, 1)",
-                    'sisss',
+                     VALUES (?, ?, ?, ?, ?, ?, 1)",
+                    'ssssss',
                     [
+                        $deviceID,
                         $studentTP,
                         $categoryID,
                         $deviceName,
@@ -107,15 +107,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ]
                 );
 
-                $deviceID = $conn->insert_id;
 
                 db_exec(
                     $conn,
                     "INSERT INTO device_status_history
-                     (deviceID, changed_by, new_status)
-                     VALUES (?, ?, 'Submitted')",
-                    'is',
-                    [$deviceID, $studentTP]
+                     (historyID, deviceID, changed_by, new_status)
+                     VALUES (?, ?, ?, 'Submitted')",
+                    'sss',
+                    [$historyID, $deviceID, $studentTP]
                 );
 
                 $conn->commit();
@@ -133,21 +132,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Submit Device | E-Waste &amp; Repair Café</title>
-    <link rel="stylesheet" href="../assets/css/style.css">
-    <script src="../assets/js/main.js" defer></script>
-</head>
-<body class="public">
+<?php $page_title = 'Submit a Device'; require '../includes/student_top.php'; ?>
+<div class="student-page-head"><span class="page-icon"><?= icon('plus') ?></span><div><span class="student-eyebrow">STUDENT PORTAL</span><h1>Submit a Device</h1><p>Manage your e-waste journey in one place.</p></div></div>
+<section class="card student-panel">
 
-<main class="placeholder_card">
 
     <span class="role-tag">STUDENT</span>
-    <h1>Submit a Device</h1>
+    
     <p>Register your electronic device for repair or recycling.</p>
 
     <?php if (!empty($errors)): ?>
@@ -167,7 +158,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <?php foreach ($categories as $category): ?>
                     <option
-                        value="<?= (int) $category['categoryID'] ?>"
+                        value="<?= e($category['categoryID']) ?>"
                         <?= (string) ($_POST['categoryID'] ?? '') ===
                             (string) $category['categoryID'] ? 'selected' : '' ?>
                     >
@@ -238,7 +229,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
     </form>
-</main>
 
-</body>
-</html>
+</section>
+<?php require '../includes/student_bottom.php'; ?>

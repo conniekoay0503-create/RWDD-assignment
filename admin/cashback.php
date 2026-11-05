@@ -25,11 +25,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($n !== 1) {
                 throw new Exception('This request has already been reviewed.');
             }
-            // Step 2: take one from stock, but only if there is stock left
-            $n = db_exec($conn, "UPDATE rewards SET stock = stock - 1 WHERE rewardID = ? AND stock > 0", 's', [$red['rewardID']]);
-            if ($n !== 1) {
-                throw new Exception('"' . $red['reward_name'] . '" is out of stock. Add stock first, or reject the request to refund the points.');
-            }
+            // Stock was already reserved when the student submitted the request.
+            // Do not decrement it again on approval.
             notify($conn, $red['tp_number'], 'Cashback paid', rm($red['cash_value']) . ' has been paid to the APCard linked to your email.', $me);
             $conn->commit();
             set_flash('success', 'Approved. Please pay ' . rm($red['cash_value']) . ' to the APCard linked to ' . $red['email'] . '.');
@@ -51,6 +48,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             // Balance = SUM(points), so removing the "-points" row gives the points back
             db_exec($conn, "DELETE FROM points_transactions WHERE redemptionID = ? AND txn_type = 'redeem'", 's', [$id]);
+            // Release the stock reserved at student redemption time.
+            $rewardID = db_value($conn, "SELECT rewardID FROM redemptions WHERE redemptionID = ?", 's', [$id]);
+            db_exec($conn, "UPDATE rewards SET stock = stock + 1 WHERE rewardID = ?", 's', [$rewardID]);
             $tp = db_value($conn, "SELECT tp_number FROM redemptions WHERE redemptionID = ?", 's', [$id]);
             notify($conn, $tp, 'Cashback rejected', 'Your cashback request was rejected and your points have been returned.', $me);
             $conn->commit();

@@ -98,22 +98,14 @@ $bonuses = db_all(
 );
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Challenges &amp; Leaderboard | E-Waste &amp; Repair Café</title>
-    <link rel="stylesheet" href="../assets/css/style.css">
-</head>
+<?php $page_title = 'Challenges & Leaderboard'; require '../includes/student_top.php'; ?>
+<div class="student-page-head"><span class="page-icon"><?= icon('flag') ?></span><div><span class="student-eyebrow">STUDENT PORTAL</span><h1>Challenges &amp; Leaderboard</h1><p>Manage your e-waste journey in one place.</p></div></div>
+<section class="card student-panel">
 
-<body class="public">
-
-<main style="max-width: 950px; margin: 40px auto; padding: 20px;">
 
     <a href="index.php">← Back to Dashboard</a>
 
-    <h1>Challenges &amp; Leaderboard</h1>
+    
     <p>Track your e-waste contributions and see your ranking.</p>
 
     <h2>My Leaderboard Rank</h2>
@@ -136,7 +128,7 @@ $bonuses = db_all(
         <?php foreach ($challenges as $challenge): ?>
 
             <?php
-            $challengeID = (int) $challenge['challengeID'];
+            $challengeID = $challenge['challengeID'];
             $currentKg = $progressByChallenge[$challengeID] ?? 0;
             $targetKg = (float) $challenge['target_kg'];
 
@@ -275,7 +267,6 @@ $bonuses = db_all(
 
     <?php endif; ?>
 
-</main>
 
-</body>
-</html>
+</section>
+<?php require '../includes/student_bottom.php'; ?>
