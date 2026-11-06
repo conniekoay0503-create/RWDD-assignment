@@ -4,270 +4,100 @@ require '../config/db.php';
 require '../includes/functions.php';
 require_role($conn, 'student', '../');
 
-$studentTP = $_SESSION['tp_number'];
+$tp = $_SESSION['tp_number'];
 
-// Total devices submitted
-$totalDevices = (int) db_value(
-    $conn,
-    "SELECT COUNT(*)
-     FROM devices
-     WHERE submitted_by = ?",
-    's',
-    [$studentTP]
-);
+// count my devices and their total weight
+$devices = db_one($conn, "SELECT
+    COUNT(*) AS total,
+    SUM(status = 'Completed') AS repaired,
+    SUM(status = 'Recycled') AS recycled,
+    COALESCE(SUM(CASE WHEN status IN ('Completed','Recycled')
+        THEN weight_kg ELSE 0 END),0) AS weight
+    FROM devices WHERE submitted_by = ?", 's', [$tp]);
 
-// Device totals grouped by current status
-$statusSummary = db_all(
-    $conn,
-    "SELECT status, COUNT(*) AS total
-     FROM devices
-     WHERE submitted_by = ?
-     GROUP BY status
-     ORDER BY status",
-    's',
-    [$studentTP]
-);
+// calculate my points
+$points = db_one($conn, "SELECT
+    COALESCE(SUM(points),0) AS balance,
+    COALESCE(SUM(CASE WHEN points > 0 THEN points ELSE 0 END),0) AS earned,
+    COALESCE(SUM(CASE WHEN points < 0 THEN -points ELSE 0 END),0) AS spent
+    FROM points_transactions WHERE tp_number = ?", 's', [$tp]);
 
-// Repaired devices collected by the student
-$repairedDevices = (int) db_value(
-    $conn,
-    "SELECT COUNT(*)
-     FROM devices
-     WHERE submitted_by = ?
-       AND status = 'Completed'",
-    's',
-    [$studentTP]
-);
+$stats = [
+    'Total Devices' => $devices['total'],
+    'Repaired Devices' => $devices['repaired'],
+    'Recycled Devices' => $devices['recycled'],
+    'Total Weight (kg)' => $devices['weight'],
+    'Points Balance' => $points['balance'],
+    'Points Earned' => $points['earned'],
+    'Points Spent' => $points['spent']
+];
 
-// Devices currently marked as recycled
-$recycledDevices = (int) db_value(
-    $conn,
-    "SELECT COUNT(*)
-     FROM devices
-     WHERE submitted_by = ?
-       AND status = 'Recycled'",
-    's',
-    [$studentTP]
-);
+// get status counts, cashback and recent devices
+$statuses = db_all($conn, "SELECT status, COUNT(*) AS total FROM devices
+    WHERE submitted_by = ? GROUP BY status ORDER BY status", 's', [$tp]);
 
-// Total recorded weight for completed or recycled devices
-$totalWeight = (float) db_value(
-    $conn,
-    "SELECT COALESCE(SUM(weight_kg), 0)
-     FROM devices
-     WHERE submitted_by = ?
-       AND status IN ('Completed', 'Recycled')",
-    's',
-    [$studentTP]
-);
+$cashback = db_one($conn, "SELECT COUNT(*) AS total_requests,
+    COALESCE(SUM(cash_value),0) AS requested_value
+    FROM redemptions WHERE tp_number = ?", 's', [$tp]);
 
-// Current points balance
-$pointsBalance = (int) db_value(
-    $conn,
-    "SELECT COALESCE(SUM(points), 0)
-     FROM points_transactions
-     WHERE tp_number = ?",
-    's',
-    [$studentTP]
-);
+$recent = db_all($conn, "SELECT deviceID, device_name, status, submitted_at
+    FROM devices WHERE submitted_by = ?
+    ORDER BY submitted_at DESC LIMIT 10", 's', [$tp]);
 
-// Total positive points recorded
-$pointsEarned = (int) db_value(
-    $conn,
-    "SELECT COALESCE(SUM(points), 0)
-     FROM points_transactions
-     WHERE tp_number = ?
-       AND points > 0",
-    's',
-    [$studentTP]
-);
-
-// Total points deducted
-$pointsSpent = (int) db_value(
-    $conn,
-    "SELECT COALESCE(SUM(-points), 0)
-     FROM points_transactions
-     WHERE tp_number = ?
-       AND points < 0",
-    's',
-    [$studentTP]
-);
-
-// Cashback redemption requests
-$redemptionSummary = db_one(
-    $conn,
-    "SELECT COUNT(*) AS total_requests,
-            COALESCE(SUM(cash_value), 0) AS requested_value
-     FROM redemptions
-     WHERE tp_number = ?",
-    's',
-    [$studentTP]
-);
-
-// Recent submitted devices
-$recentDevices = db_all(
-    $conn,
-    "SELECT deviceID, device_name, status, submitted_at
-     FROM devices
-     WHERE submitted_by = ?
-     ORDER BY submitted_at DESC, deviceID DESC
-     LIMIT 10",
-    's',
-    [$studentTP]
-);
+$page_title = 'My Report';
+require '../includes/student_top.php';
 ?>
 
-<?php $page_title = 'My Report'; require '../includes/student_top.php'; ?>
-<div class="student-page-head"><span class="page-icon"><?= icon('chart') ?></span><div><span class="student-eyebrow">STUDENT PORTAL</span><h1>My Report</h1><p>Manage your e-waste journey in one place.</p></div></div>
+<div class="student-page-head">
+    <span class="page-icon">📊</span>
+    <div>
+        <span class="student-eyebrow">STUDENT PORTAL</span>
+        <h1>My Report</h1>
+        <p>Your personal recycling and repair summary.</p>
+    </div>
+</div>
+
 <section class="card student-panel">
-
-
-    <a href="index.php">← Back to Dashboard</a>
-
-    
-
-    <p>
-        View your personal repair, recycling,
-        points and cashback activity.
-    </p>
-
-    <hr>
-
-    <h2>Device Summary</h2>
-
-    <p>
-        <strong>Total Devices Submitted:</strong>
-        <?= $totalDevices ?>
-    </p>
-
-    <p>
-        <strong>Repaired &amp; Collected:</strong>
-        <?= $repairedDevices ?>
-    </p>
-
-    <p>
-        <strong>Recycled Devices:</strong>
-        <?= $recycledDevices ?>
-    </p>
-
-    <p>
-        <strong>Recorded Processed Weight:</strong>
-        <?= number_format($totalWeight, 2) ?> kg
-    </p>
-
-    <h3>Devices by Current Status</h3>
-
-    <?php if (empty($statusSummary)): ?>
-        <p>No devices submitted yet.</p>
-    <?php else: ?>
-        <table style="width: 100%; border-collapse: collapse;">
-            <thead>
-                <tr>
-                    <th>Status</th>
-                    <th>Number of Devices</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($statusSummary as $row): ?>
-                    <tr>
-                        <td><?= e($row['status']) ?></td>
-                        <td><?= (int) $row['total'] ?></td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-    <?php endif; ?>
-
-    <hr>
-
-    <h2>Points Summary</h2>
-
-    <p>
-        <strong>Current Balance:</strong>
-        <?= number_format($pointsBalance) ?> points
-    </p>
-
-    <p>
-        <strong>Total Positive Points:</strong>
-        <?= number_format($pointsEarned) ?> points
-    </p>
-
-    <p>
-        <strong>Total Points Deducted:</strong>
-        <?= number_format($pointsSpent) ?> points
-    </p>
-
-    <p>
-        <a href="rewards.php">View Points &amp; Cashback</a>
-    </p>
-
-    <hr>
-
-    <h2>Cashback Summary</h2>
-
-    <p>
-        <strong>Redemption Requests:</strong>
-        <?= (int) $redemptionSummary['total_requests'] ?>
-    </p>
-
-    <p>
-        <strong>Total Cashback Requested:</strong>
-        <?= e(rm($redemptionSummary['requested_value'])) ?>
-    </p>
-
-    <p>
-        <small>
-            Requested cashback includes pending requests.
-            It does not necessarily mean payment has been made.
-        </small>
-    </p>
-
-    <hr>
-
-    <h2>Recent Devices</h2>
-
-    <?php if (empty($recentDevices)): ?>
-        <p>No device activity available.</p>
-    <?php else: ?>
-
-        <div style="overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse;">
-                <thead>
-                    <tr>
-                        <th>Device</th>
-                        <th>Status</th>
-                        <th>Submitted</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    <?php foreach ($recentDevices as $device): ?>
-                        <tr>
-                            <td><?= e($device['device_name']) ?></td>
-
-                            <td><?= e($device['status']) ?></td>
-
-                            <td>
-                                <?= e(nice_date(
-                                    $device['submitted_at'],
-                                    false
-                                )) ?>
-                            </td>
-
-                            <td>
-                                <a href="device-details.php?id=<?= e($device['deviceID']) ?>">
-                                    View Details
-                                </a>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-
-    <?php endif; ?>
-
-
+    <a href="index.php" class="btn">&larr; Back to Dashboard</a>
+    <h2>My Impact</h2>
+    <div class="stat-grid three">
+        <?php foreach ($stats as $name => $value): ?>
+            <div class="stat-card">
+                <strong class="stat-value"><?= number_format((float)$value, $name === 'Total Weight (kg)' ? 2 : 0) ?></strong>
+                <span class="stat-title"><?= e($name) ?></span>
+            </div>
+        <?php endforeach; ?>
+    </div>
 </section>
+
+<section class="card student-panel">
+    <h2>Device Status Summary</h2>
+    <div class="table-wrap"><table>
+        <tr><th>Status</th><th>Total</th></tr>
+        <?php foreach ($statuses as $s): ?>
+            <tr><td><?= e($s['status']) ?></td><td><?= (int)$s['total'] ?></td></tr>
+        <?php endforeach; ?>
+    </table></div>
+</section>
+
+<section class="card student-panel">
+    <h2>Cashback Summary</h2>
+    <p>Total Requests: <?= (int)$cashback['total_requests'] ?></p>
+    <p>Total Cashback Requested: <?= e(rm($cashback['requested_value'])) ?></p>
+</section>
+
+<section class="card student-panel">
+    <h2>Recent Devices</h2>
+    <div class="table-wrap"><table>
+        <tr><th>Device</th><th>Status</th><th>Submitted</th></tr>
+        <?php foreach ($recent as $d): ?>
+            <tr>
+                <td><a href="device-details.php?id=<?= urlencode($d['deviceID']) ?>"><?= e($d['device_name']) ?></a></td>
+                <td><?= e($d['status']) ?></td>
+                <td><?= e(nice_date($d['submitted_at'])) ?></td>
+            </tr>
+        <?php endforeach; ?>
+    </table></div>
+</section>
+
 <?php require '../includes/student_bottom.php'; ?>

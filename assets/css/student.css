@@ -1,31 +1,250 @@
-/* Student portal: shares Admin typography, palette, shadows and components. */
-.student-app .student-content{max-width:1250px;margin-inline:auto;width:100%}
-.student-nav ul{gap:.15rem}
-.student-nav .pill{font-size:.82rem}
-.student-app .student-page-head{display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem}
-.student-page-head h1{font-family:var(--font-display);font-size:clamp(1.55rem,3vw,2.3rem);margin:.15rem 0}
-.student-page-head p{color:var(--muted);margin:0}
-.student-eyebrow{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;font-weight:800;color:var(--mint-fg)}
-.student-panel{padding:clamp(1.2rem,3vw,2.3rem);margin-bottom:2rem}
-.student-panel h2{font-size:1.3rem;margin:1.5rem 0 .7rem}
-.student-panel h3{font-size:1.05rem;margin:1.3rem 0 .65rem}
-.student-panel > p:first-child{color:var(--muted)}
-.student-panel form{max-width:100%}
-.student-panel form label{font-weight:650}
-.student-panel input:not([type=checkbox]):not([type=radio]):not([type=hidden]),.student-panel select,.student-panel textarea{max-width:100%;border:1px solid var(--border);border-radius:10px;padding:.7rem .85rem;background:var(--surface);color:var(--text)}
-.student-panel input:focus-visible,.student-panel select:focus-visible,.student-panel textarea:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
-.student-panel table{width:100%;border-collapse:collapse}
-.student-panel th,.student-panel td{padding:.85rem .8rem;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
-.student-panel th{background:var(--surface-2);font-size:.85rem}
-.student-panel img{max-width:100%;border-radius:12px}
-.student-panel .btn{margin:.2rem .2rem .2rem 0}
-.student-quick-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem;margin-bottom:2rem}
-.student-quick{display:flex;align-items:center;gap:1rem;text-decoration:none;color:var(--text);padding:1.2rem;transition:transform .15s,box-shadow .15s}
-.student-quick:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
-.student-quick>span:nth-child(2){flex:1}
-.student-quick strong,.student-quick small{display:block}
-.student-quick small{color:var(--muted);margin-top:.3rem;font-size:.8rem}
-.student-hero{margin-bottom:2rem}
-@media(max-width:1100px){.student-nav{overflow-x:auto;max-width:60vw}.student-nav ul{width:max-content}.student-nav .pill-label{display:inline}}
-@media(max-width:800px){.student-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.student-app .topbar{flex-wrap:wrap}.student-nav{order:3;max-width:100%;width:100%}}
-@media(max-width:520px){.student-quick-grid{grid-template-columns:1fr}.student-panel{overflow-x:auto}.student-app .brand-text{font-size:.88rem}.student-page-head{align-items:flex-start}}
+
+/* Student layout */
+.student-app .student-content {
+    max-width: 1250px;
+    width: 100%;
+    margin-inline: auto;
+}
+
+.student-nav ul { gap: .15rem; }
+.student-nav .pill { font-size: .82rem; }
+
+.student-app .student-page-head {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.student-page-head h1 {
+    font-family: var(--font-display);
+    font-size: clamp(1.55rem, 3vw, 2.3rem);
+    margin: .15rem 0;
+}
+
+.student-page-head p,
+.student-panel > p:first-child {
+    color: var(--muted);
+}
+
+.student-page-head p { margin: 0; }
+
+.student-eyebrow {
+    font-size: .72rem;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    font-weight: 800;
+    color: var(--mint-fg);
+}
+
+.student-panel {
+    padding: clamp(1.2rem, 3vw, 2.3rem);
+    margin-bottom: 2rem;
+}
+
+.student-panel h2 { font-size: 1.3rem; margin: 1.5rem 0 .7rem; }
+.student-panel h3 { font-size: 1.05rem; margin: 1.3rem 0 .65rem; }
+.student-panel form { max-width: 100%; }
+.student-panel form label { font-weight: 650; }
+
+.student-panel input:not([type=checkbox]):not([type=radio]):not([type=hidden]),
+.student-panel select,
+.student-panel textarea {
+    max-width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: .7rem .85rem;
+    background: var(--surface);
+    color: var(--text);
+}
+
+.student-panel input:focus-visible,
+.student-panel select:focus-visible,
+.student-panel textarea:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+.student-panel table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.student-panel th,
+.student-panel td {
+    padding: .85rem .8rem;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: top;
+}
+
+.student-panel th {
+    background: var(--surface-2);
+    font-size: .85rem;
+}
+
+.student-panel img {
+    max-width: 100%;
+    border-radius: 12px;
+}
+
+.student-panel .btn { margin: .2rem .2rem .2rem 0; }
+.student-hero { margin-bottom: 2rem; }
+
+/* Submit device */
+.submit-form, .submit-field {
+    display: flex;
+    flex-direction: column;
+}
+
+.submit-form { gap: 20px; }
+.submit-field { gap: 8px; width: 100%; }
+.submit-field label { display: block; font-weight: 600; }
+
+.submit-field input,
+.submit-field select,
+.submit-field textarea {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0;
+}
+
+.submit-field textarea { min-height: 110px; resize: vertical; }
+.submit-field small { color: #64756d; }
+
+.submit-field input[type="file"] {
+    padding: 12px;
+    border: 1px solid #d7e5dd;
+    border-radius: 10px;
+}
+
+.submit-terms, .submit-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.submit-terms input { width: auto; margin: 0; }
+.submit-actions { flex-wrap: wrap; }
+
+.submission-terms {
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface-2);
+}
+
+.submission-terms h3 { margin: 0 0 8px; font-size: 16px; }
+.submission-terms p,
+.submission-terms li { font-size: 13px; }
+.submission-terms ol { padding-left: 20px; margin-bottom: 0; }
+.submission-terms li { margin-bottom: 6px; }
+
+/* Cashback rewards */
+.reward-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+}
+
+.reward-card {
+    background: #fff !important;
+    background-image: none !important;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: none;
+}
+
+.reward-card::before,
+.reward-card::after {
+    display: none !important;
+    content: none !important;
+}
+
+.reward-card h3 { font-size: 15px; margin: 0 0 8px; }
+.reward-card h2 { font-size: 20px; margin: 10px 0; }
+.reward-card p { font-size: 13px; margin: 6px 0; }
+.reward-card .btn { margin-top: 10px; padding: 7px 16px; font-size: 13px; }
+
+.reward-card button:disabled {
+    background: #ddd;
+    color: #777;
+    border-color: #ddd;
+    cursor: not-allowed;
+    opacity: 1;
+}
+
+/* Dashboard */
+.student-app .dashboard-stats {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin: 20px 0;
+}
+
+.student-app .dashboard-stats .card {
+    padding: 18px;
+    margin: 0;
+    min-width: 0;
+    box-shadow: var(--shadow);
+}
+
+.dashboard-stats strong,
+.dashboard-stats span { display: block; }
+
+.dashboard-stats strong { font-size: 24px; margin-bottom: 5px; }
+.dashboard-stats span { font-size: 13px; color: var(--muted); }
+
+.dashboard-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.dashboard-item:last-child,
+.dashboard-announcement:last-child { border-bottom: 0; }
+
+.dashboard-item p,
+.dashboard-announcement p {
+    margin: 5px 0;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.dashboard-announcement {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.dashboard-announcement small { color: var(--muted); }
+
+/* Mobile layout */
+@media (max-width: 1100px) {
+    .student-nav { overflow-x: auto; max-width: 60vw; }
+    .student-nav ul { width: max-content; }
+    .student-nav .pill-label { display: inline; }
+}
+
+@media (max-width: 800px) {
+    .student-app .topbar { flex-wrap: wrap; }
+    .student-nav { order: 3; max-width: 100%; width: 100%; }
+}
+
+@media (max-width: 700px) {
+    .reward-grid { grid-template-columns: repeat(2, 1fr); }
+    .student-app .dashboard-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 520px) {
+    .reward-grid { grid-template-columns: 1fr; }
+    .student-panel { overflow-x: auto; }
+    .student-app .brand-text { font-size: .88rem; }
+    .student-app .student-page-head { align-items: flex-start; }
+}

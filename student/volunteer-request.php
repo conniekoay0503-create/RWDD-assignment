@@ -4,220 +4,112 @@ require '../config/db.php';
 require '../includes/functions.php';
 require_role($conn, 'student', '../');
 
-$studentTP = $_SESSION['tp_number'];
+$tp = $_SESSION['tp_number'];
 $error = '';
 
-if (empty($_SESSION['volunteer_csrf'])) {
+if (empty($_SESSION['volunteer_csrf']))
     $_SESSION['volunteer_csrf'] = bin2hex(random_bytes(32));
-}
-
-$latestRequest = db_one(
-    $conn,
-    "SELECT requestID, reason, status, requested_at, reviewed_at
-     FROM volunteer_request
-     WHERE tp_number = ?
-     ORDER BY requested_at DESC, requestID DESC
-     LIMIT 1",
-    's',
-    [$studentTP]
-);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $reason = trim((string)($_POST['reason'] ?? ''));
     $token = $_POST['csrf_token'] ?? '';
-    $reason = trim($_POST['reason'] ?? '');
 
-    if (!is_string($token) ||
-        !hash_equals($_SESSION['volunteer_csrf'], $token)) {
-        $error = 'Invalid request. Please refresh the page.';
-    } elseif ($reason === '' || strlen($reason) > 255) {
-        $error = 'Please enter a reason (maximum 255 characters).';
-    } else {
+    if (!is_string($token) || !hash_equals($_SESSION['volunteer_csrf'], $token))
+        $error = 'Invalid request.';
+    elseif ($reason === '' || mb_strlen($reason) > 255)
+        $error = 'Reason must be 1 to 255 characters.';
+    else {
         try {
             $conn->begin_transaction();
 
-            // Lock the student row to prevent duplicate
-            // requests from simultaneous submissions.
-            $student = db_one(
-                $conn,
-                "SELECT tp_number FROM students
-                 WHERE tp_number = ?
-                 FOR UPDATE",
-                's',
-                [$studentTP]
-            );
+            // lock my account and check for pending requests
+            $student = db_one($conn, "SELECT tp_number FROM students
+                WHERE tp_number = ? FOR UPDATE", 's', [$tp]);
 
-            if (!$student) {
-                throw new RuntimeException('Student account not found.');
-            }
+            if (!$student) throw new RuntimeException('Student account not found.');
 
-            $pending = db_one(
-                $conn,
-                "SELECT requestID FROM volunteer_request
-                 WHERE tp_number = ? AND status = 'pending'
-                 LIMIT 1",
-                's',
-                [$studentTP]
-            );
+            $pending = db_one($conn, "SELECT requestID FROM volunteer_request
+                WHERE tp_number = ? AND status = 'pending'", 's', [$tp]);
 
-            if ($pending) {
-                throw new RuntimeException(
-                    'You already have a pending volunteer request.'
-                );
-            }
+            if ($pending) throw new RuntimeException('You already have a pending request.');
 
-            $requestID = next_id($conn, 'volunteer_request', 'requestID', 'VR');
-            db_exec(
-                $conn,
-                "INSERT INTO volunteer_request
-                 (requestID, tp_number, reason, status)
-                 VALUES (?, ?, ?, 'pending')",
-                'sss',
-                [$requestID, $studentTP, $reason]
-            );
+            // save my application
+            $id = next_id($conn, 'volunteer_request', 'requestID', 'VR');
+            db_exec($conn, "INSERT INTO volunteer_request
+                (requestID, tp_number, reason, status)
+                VALUES (?,?,?,'pending')", 'sss', [$id, $tp, $reason]);
 
-            $user = db_one(
-                $conn,
-                "SELECT name FROM users WHERE tp_number = ?",
-                's',
-                [$studentTP]
-            );
+            $user = db_one($conn, "SELECT name FROM users WHERE tp_number = ?", 's', [$tp]);
 
-            notify_admins(
-                $conn,
-                'New volunteer request',
-                ($user['name'] ?? $studentTP) .
-                ' submitted a Repair Volunteer application.'
-            );
+            notify_admins($conn, 'New volunteer request',
+                ($user['name'] ?? $tp) . ' submitted a Repair Volunteer application.');
 
             $conn->commit();
-
             $_SESSION['volunteer_csrf'] = bin2hex(random_bytes(32));
-
-            set_flash(
-                'success',
-                'Your volunteer application has been submitted.'
-            );
-
+            set_flash('success', 'Volunteer application submitted.');
             redirect('volunteer-request.php');
 
-        } catch (Throwable $exception) {
+        } catch (Throwable $e) {
             $conn->rollback();
-
-            if ($exception instanceof RuntimeException) {
-                $error = $exception->getMessage();
-            } else {
-                error_log($exception->getMessage());
-                $error = 'Unable to submit your request. Please try again.';
-            }
+            $error = $e instanceof RuntimeException
+                ? $e->getMessage() : 'Unable to submit request.';
+            if (!($e instanceof RuntimeException)) error_log($e->getMessage());
         }
     }
 }
 
-// Refresh latest request for display.
-$latestRequest = db_one(
-    $conn,
-    "SELECT requestID, reason, status, requested_at, reviewed_at
-     FROM volunteer_request
-     WHERE tp_number = ?
-     ORDER BY requested_at DESC, requestID DESC
-     LIMIT 1",
-    's',
-    [$studentTP]
-);
+// show my previous applications
+$requests = db_all($conn, "SELECT requestID, reason, status, requested_at, reviewed_at
+    FROM volunteer_request WHERE tp_number = ?
+    ORDER BY requested_at DESC", 's', [$tp]);
 
-$hasPending = $latestRequest &&
-    $latestRequest['status'] === 'pending';
+$pending = in_array('pending', array_column($requests, 'status'), true);
+
+$page_title = 'Become a Volunteer';
+require '../includes/student_top.php';
 ?>
 
-<?php $page_title = 'Become a Volunteer'; require '../includes/student_top.php'; ?>
-<div class="student-page-head"><span class="page-icon"><?= icon('heart') ?></span><div><span class="student-eyebrow">STUDENT PORTAL</span><h1>Become a Volunteer</h1><p>Manage your e-waste journey in one place.</p></div></div>
+<div class="student-page-head">
+    <span class="page-icon">🤝</span>
+    <div>
+        <h1>Become a Volunteer</h1>
+        <p>Apply to help repair electronic devices.</p>
+    </div>
+</div>
+
 <section class="card student-panel">
+    <a href="index.php" class="btn">&larr; Back to Dashboard</a>
+    <h2>Volunteer Application</h2>
 
+    <?php if ($error): ?><p class="alert alert-error"><?= e($error) ?></p><?php endif; ?>
 
-    <a href="index.php">← Back to Dashboard</a>
-
-    
-
-    <p>
-        Interested in repairing electronic devices?
-        Apply to join our Repair Volunteer team.
-    </p>
-
-    
-
-    <?php if ($error !== ''): ?>
-        <p role="alert" style="color: #b42318;">
-            <?= e($error) ?>
-        </p>
-    <?php endif; ?>
-
-    <?php if ($latestRequest): ?>
-        <section>
-            <h2>My Latest Application</h2>
-
-            <p>
-                <strong>Status:</strong>
-                <?= e(ucfirst($latestRequest['status'])) ?>
-            </p>
-
-            <p>
-                <strong>Reason:</strong>
-                <?= e($latestRequest['reason']) ?>
-            </p>
-
-            <p>
-                <strong>Submitted:</strong>
-                <?= e(nice_date(
-                    $latestRequest['requested_at'],
-                    true
-                )) ?>
-            </p>
-        </section>
-        <hr>
-    <?php endif; ?>
-
-    <?php if ($hasPending): ?>
-
-        <p>
-            Your application is being reviewed by an Admin.
-            You cannot submit another application while it is pending.
-        </p>
-
+    <?php if ($pending): ?>
+        <p>You already have a pending application.</p>
     <?php else: ?>
-
-        <h2>Volunteer Application</h2>
-
-        <form method="POST" action="volunteer-request.php">
-
-            <input
-                type="hidden"
-                name="csrf_token"
-                value="<?= e($_SESSION['volunteer_csrf']) ?>"
-            >
-
-            <label for="reason">
-                Why do you want to become a Repair Volunteer?
-            </label>
-
-            <textarea
-                id="reason"
-                name="reason"
-                maxlength="255"
-                rows="5"
-                required
-                placeholder="Tell us about your interest or repair experience"
-            ><?= e($_POST['reason'] ?? '') ?></textarea>
-
-            <p>
-                <button type="submit" class="btn btn-primary">
-                    Submit Application
-                </button>
-            </p>
-
+        <form method="post">
+            <input type="hidden" name="csrf_token" value="<?= e($_SESSION['volunteer_csrf']) ?>">
+            <label for="reason">Why do you want to volunteer?</label>
+            <textarea id="reason" name="reason" maxlength="255" required><?= e($_POST['reason'] ?? '') ?></textarea>
+            <button class="btn btn-primary">Submit Application</button>
         </form>
-
     <?php endif; ?>
-
-
 </section>
+
+<section class="card student-panel">
+    <h2>Application History</h2>
+    <?php if (!$requests): ?><p>No applications yet.</p><?php endif; ?>
+
+    <div class="table-wrap"><table>
+        <tr><th>Reason</th><th>Status</th><th>Requested</th><th>Reviewed</th></tr>
+        <?php foreach ($requests as $r): ?>
+            <tr>
+                <td><?= e($r['reason']) ?></td>
+                <td><span class="badge"><?= e(ucfirst($r['status'])) ?></span></td>
+                <td><?= e(nice_date($r['requested_at'])) ?></td>
+                <td><?= e(nice_date($r['reviewed_at'])) ?></td>
+            </tr>
+        <?php endforeach; ?>
+    </table></div>
+</section>
+
 <?php require '../includes/student_bottom.php'; ?>

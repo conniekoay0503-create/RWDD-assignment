@@ -4,267 +4,130 @@ require '../config/db.php';
 require '../includes/functions.php';
 require_role($conn, 'student', '../');
 
-$studentTP = $_SESSION['tp_number'];
+$tp = $_SESSION['tp_number'];
 $error = '';
 
-if (empty($_SESSION['feedback_csrf'])) {
+if (empty($_SESSION['feedback_csrf']))
     $_SESSION['feedback_csrf'] = bin2hex(random_bytes(32));
-}
 
-// Only devices belonging to this student can be selected.
-$devices = db_all(
-    $conn,
-    "SELECT deviceID, device_name, status
-     FROM devices
-     WHERE submitted_by = ?
-     ORDER BY submitted_at DESC, deviceID DESC",
-    's',
-    [$studentTP]
-);
+// get my submitted devices
+$devices = db_all($conn,
+    "SELECT deviceID, device_name FROM devices
+     WHERE submitted_by = ? ORDER BY submitted_at DESC",
+    's', [$tp]);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $id = $_POST['deviceID'] ?? '';
+    $message = trim((string)($_POST['message'] ?? ''));
     $token = $_POST['csrf_token'] ?? '';
-    $deviceID = trim((string) ($_POST['deviceID'] ?? ''));
-    $message = trim($_POST['message'] ?? '');
 
-    if (!is_string($token) ||
-        !hash_equals($_SESSION['feedback_csrf'], $token)) {
-        $error = 'Invalid request. Please refresh the page.';
-    } elseif (!preg_match('/^D[0-9]{3,9}$/', $deviceID)) {
-        $error = 'Please select a device.';
-    } elseif ($message === '' || mb_strlen($message) > 255) {
-        $error = 'Feedback must be between 1 and 255 characters.';
-    } else {
-        $ownedDevice = db_one(
-            $conn,
-            "SELECT deviceID, device_name
-             FROM devices
-             WHERE deviceID = ? AND submitted_by = ?",
-            'ss',
-            [$deviceID, $studentTP]
-        );
+    if (!is_string($token) || !hash_equals($_SESSION['feedback_csrf'], $token))
+        $error = 'Invalid request.';
+    elseif ($message === '' || mb_strlen($message) > 255)
+        $error = 'Feedback must be 1 to 255 characters.';
+    else {
+        // check if the device belongs to user
+        $device = null;
+        foreach ($devices as $d) {
+            if ($d['deviceID'] === $id) $device = $d;
+        }
 
-        if (!$ownedDevice) {
-            $error = 'Invalid device selection.';
+        if (!$device) {
+            $error = 'Please select a valid device.';
         } else {
             try {
                 $conn->begin_transaction();
 
-                $feedbackID = next_id($conn, 'feedback', 'feedbackID', 'F');
-                db_exec(
-                    $conn,
-                    "INSERT INTO feedback
-                     (feedbackID, tp_number, deviceID, message)
-                     VALUES (?, ?, ?, ?)",
-                    'ssss',
-                    [$feedbackID, $studentTP, $deviceID, $message]
-                );
+                $fid = next_id($conn, 'feedback', 'feedbackID', 'F');
+                db_exec($conn,
+                    "INSERT INTO feedback (feedbackID, tp_number, deviceID, message)
+                     VALUES (?,?,?,?)",
+                    'ssss', [$fid, $tp, $id, $message]);
 
-                $user = db_one(
-                    $conn,
-                    "SELECT name FROM users WHERE tp_number = ?",
-                    's',
-                    [$studentTP]
-                );
+                $user = db_one($conn,
+                    "SELECT name FROM users WHERE tp_number = ?", 's', [$tp]);
 
-                notify_admins(
-                    $conn,
-                    'New feedback',
-                    ($user['name'] ?? $studentTP) .
-                    ' sent feedback about ' .
-                    $ownedDevice['device_name'] . '.'
-                );
+                notify_admins($conn, 'New feedback',
+                    ($user['name'] ?? $tp) . ' sent feedback about ' . $device['device_name'] . '.');
 
                 $conn->commit();
-
-                $_SESSION['feedback_csrf'] =
-                    bin2hex(random_bytes(32));
-
-                set_flash(
-                    'success',
-                    'Your feedback has been submitted successfully.'
-                );
-
+                $_SESSION['feedback_csrf'] = bin2hex(random_bytes(32));
+                set_flash('success', 'Feedback submitted successfully.');
                 redirect('feedback.php');
 
-            } catch (Throwable $exception) {
+            } catch (Throwable $e) {
                 $conn->rollback();
-                error_log($exception->getMessage());
-                $error = 'Unable to submit feedback. Please try again.';
+                error_log($e->getMessage());
+                $error = 'Unable to submit feedback.';
             }
         }
     }
 }
 
-// Retrieve feedback and Admin replies.
-$feedbackList = db_all(
-    $conn,
-    "SELECT
-        f.feedbackID,
-        f.message,
-        f.admin_reply,
-        f.submitted_at,
-        f.replied_at,
-        d.device_name
-     FROM feedback f
+// show my feedback and admin replies
+$feedback = db_all($conn,
+    "SELECT f.*, d.device_name FROM feedback f
      JOIN devices d ON f.deviceID = d.deviceID
-     WHERE f.tp_number = ?
-       AND d.submitted_by = ?
-     ORDER BY f.submitted_at DESC, f.feedbackID DESC",
-    'ss',
-    [$studentTP, $studentTP]
-);
+     WHERE f.tp_number = ? AND d.submitted_by = ?
+     ORDER BY f.submitted_at DESC", 'ss', [$tp, $tp]);
+
+$page_title = 'Feedback';
+require '../includes/student_top.php';
 ?>
 
-<?php $page_title = 'Feedback'; require '../includes/student_top.php'; ?>
-<div class="student-page-head"><span class="page-icon"><?= icon('message') ?></span><div><span class="student-eyebrow">STUDENT PORTAL</span><h1>Feedback</h1><p>Manage your e-waste journey in one place.</p></div></div>
+<div class="student-page-head">
+    <span class="page-icon">💬</span>
+    <div>
+        <h1>Feedback</h1>
+        <p>Share your experience or ask a question.</p>
+    </div>
+</div>
+
 <section class="card student-panel">
-
-
-    <a href="index.php">← Back to Dashboard</a>
-
-    
-    <p>
-        Share your experience or ask a question
-        about one of your submitted devices.
-    </p>
-
-    
-
-    <?php if ($error !== ''): ?>
-        <p role="alert" style="color: #b42318;">
-            <?= e($error) ?>
-        </p>
-    <?php endif; ?>
-
+    <a href="index.php" class="btn">&larr; Back to Dashboard</a>
     <h2>Submit Feedback</h2>
 
-    <?php if (empty($devices)): ?>
-        <p>
-            You need to submit a device before
-            you can send device-related feedback.
-        </p>
+    <?php if ($error): ?>
+        <p class="alert alert-error"><?= e($error) ?></p>
+    <?php endif; ?>
+
+    <?php if (!$devices): ?>
+        <p>Submit a device before sending feedback.</p>
     <?php else: ?>
+        <form method="post">
+            <input type="hidden" name="csrf_token" value="<?= e($_SESSION['feedback_csrf']) ?>">
 
-        <form method="POST" action="feedback.php">
+            <label for="deviceID">Device</label>
+            <select id="deviceID" name="deviceID" required>
+                <option value="">Select a device</option>
+                <?php foreach ($devices as $d): ?>
+                    <option value="<?= e($d['deviceID']) ?>"
+                        <?= ($_POST['deviceID'] ?? '') === $d['deviceID'] ? 'selected' : '' ?>>
+                        <?= e($d['device_name']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
 
-            <input
-                type="hidden"
-                name="csrf_token"
-                value="<?= e($_SESSION['feedback_csrf']) ?>"
-            >
+            <label for="message">Your Feedback</label>
+            <textarea id="message" name="message" maxlength="255" required><?= e($_POST['message'] ?? '') ?></textarea>
 
-            <p>
-                <label for="deviceID">Select Device</label>
-                <select name="deviceID" id="deviceID" required>
-                    <option value="">Choose a device</option>
-
-                    <?php foreach ($devices as $device): ?>
-                        <option
-                            value="<?= e($device['deviceID']) ?>"
-                            <?= (string) ($_POST['deviceID'] ?? '') ===
-                                (string) $device['deviceID']
-                                ? 'selected' : '' ?>
-                        >
-                            <?= e($device['device_name']) ?>
-                            (<?= e($device['status']) ?>)
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </p>
-
-            <p>
-                <label for="message">Your Feedback</label>
-                <textarea
-                    id="message"
-                    name="message"
-                    rows="5"
-                    maxlength="255"
-                    required
-                    placeholder="Tell us about your experience or question"
-                ><?= e($_POST['message'] ?? '') ?></textarea>
-            </p>
-
-            <button type="submit" class="btn btn-primary">
-                Submit Feedback
-            </button>
-
+            <button class="btn btn-primary">Submit Feedback</button>
         </form>
-
     <?php endif; ?>
-
-    <hr>
-
-    <h2>My Feedback History</h2>
-
-    <?php if (empty($feedbackList)): ?>
-
-        <p>You haven't submitted any feedback yet.</p>
-
-    <?php else: ?>
-
-        <?php foreach ($feedbackList as $feedback): ?>
-
-            <section style="
-                border: 1px solid #d7e4dc;
-                border-radius: 12px;
-                padding: 18px;
-                margin: 15px 0;
-            ">
-
-                <h3><?= e($feedback['device_name']) ?></h3>
-
-                <p>
-                    <strong>Submitted:</strong>
-                    <?= e(nice_date(
-                        $feedback['submitted_at'],
-                        true
-                    )) ?>
-                </p>
-
-                <p>
-                    <strong>My Feedback:</strong>
-                    <?= nl2br(e($feedback['message'])) ?>
-                </p>
-
-                <?php if ($feedback['admin_reply'] !== null): ?>
-
-                    <div style="
-                        background: #e5f6ed;
-                        border-radius: 10px;
-                        padding: 14px;
-                    ">
-
-                        <strong>Admin Reply</strong>
-
-                        <p>
-                            <?= nl2br(e($feedback['admin_reply'])) ?>
-                        </p>
-
-                        <?php if ($feedback['replied_at']): ?>
-                            <small>
-                                Replied:
-                                <?= e(nice_date(
-                                    $feedback['replied_at'],
-                                    true
-                                )) ?>
-                            </small>
-                        <?php endif; ?>
-
-                    </div>
-
-                <?php else: ?>
-
-                    <p>Awaiting Admin reply.</p>
-
-                <?php endif; ?>
-
-            </section>
-
-        <?php endforeach; ?>
-
-    <?php endif; ?>
-
-
 </section>
+
+<section class="card student-panel">
+    <h2>My Feedback</h2>
+    <?php if (!$feedback): ?><p>No feedback submitted yet.</p><?php endif; ?>
+
+    <?php foreach ($feedback as $f): ?>
+        <div class="card">
+            <h3><?= e($f['device_name']) ?></h3>
+            <p><?= e($f['message']) ?></p>
+            <small><?= e(nice_date($f['submitted_at'], true)) ?></small>
+            <p><strong>Admin Reply:</strong> <?= e($f['admin_reply'] ?: 'Awaiting reply') ?></p>
+        </div>
+    <?php endforeach; ?>
+</section>
+
 <?php require '../includes/student_bottom.php'; ?>

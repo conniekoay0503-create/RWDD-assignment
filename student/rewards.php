@@ -4,261 +4,103 @@ require '../config/db.php';
 require '../includes/functions.php';
 require_role($conn, 'student', '../');
 
-$studentTP = $_SESSION['tp_number'];
-if (empty($_SESSION['redeem_csrf'])) {
+$tp = $_SESSION['tp_number'];
+
+if (empty($_SESSION['redeem_csrf']))
     $_SESSION['redeem_csrf'] = bin2hex(random_bytes(32));
-}
 
-// Points balance is calculated from transaction history.
-$pointsBalance = (int) db_value(
-    $conn,
-    "SELECT COALESCE(SUM(points), 0)
-     FROM points_transactions
-     WHERE tp_number = ?",
-    's',
-    [$studentTP]
-);
+// get my points and available rewards
+$points = (int)db_value($conn, "SELECT COALESCE(SUM(points),0)
+    FROM points_transactions WHERE tp_number = ?", 's', [$tp]);
 
-// Retrieve all cashback rewards.
-$rewards = db_all(
-    $conn,
-    "SELECT rewardID, reward_name, description,
-            points_required, cash_value, stock
-     FROM rewards
-     ORDER BY points_required ASC"
-);
+$rewards = db_all($conn, "SELECT * FROM rewards ORDER BY points_required ASC");
 
-// Retrieve this student's redemption history.
-$redemptions = db_all(
-    $conn,
-    "SELECT r.redemptionID, rw.reward_name,
-            r.points_used, r.cash_value,
-            r.status, r.requested_at
-     FROM redemptions r
-     JOIN rewards rw ON r.rewardID = rw.rewardID
-     WHERE r.tp_number = ?
-     ORDER BY r.requested_at DESC, r.redemptionID DESC",
-    's',
-    [$studentTP]
-);
+// get my redemption and points history
+$redemptions = db_all($conn, "SELECT r.*, rw.reward_name FROM redemptions r
+    JOIN rewards rw ON r.rewardID = rw.rewardID
+    WHERE r.tp_number = ? ORDER BY r.requested_at DESC, r.redemptionID DESC", 's', [$tp]);
 
-// Retrieve points transaction history.
-$transactions = db_all(
-    $conn,
-    "SELECT points, txn_type, description, created_at
-     FROM points_transactions
-     WHERE tp_number = ?
-     ORDER BY created_at DESC, transactionID DESC",
-    's',
-    [$studentTP]
-);
+$transactions = db_all($conn, "SELECT * FROM points_transactions
+    WHERE tp_number = ? ORDER BY created_at DESC, transactionID DESC", 's', [$tp]);
+
+$page_title = 'Points & Cashback';
+require '../includes/student_top.php';
 ?>
 
-<?php $page_title = 'Points & Cashback'; require '../includes/student_top.php'; ?>
-<div class="student-page-head"><span class="page-icon"><?= icon('wallet') ?></span><div><span class="student-eyebrow">STUDENT PORTAL</span><h1>Points &amp; Cashback</h1><p>Manage your e-waste journey in one place.</p></div></div>
+<div class="student-page-head">
+    <span class="page-icon">🎁</span>
+    <div>
+        <h1>Points & Cashback</h1>
+        <p>Earn points and redeem cashback rewards.</p>
+    </div>
+</div>
+
 <section class="card student-panel">
-
-
-    <a href="index.php">← Back to Dashboard</a>
-
-    
-
-    <p>Earn points by participating in e-waste repair and recycling.</p>
-
-    
-
-    <section>
-        <h2>My Points Balance</h2>
-        <h1><?= number_format($pointsBalance) ?> points</h1>
-    </section>
-
+    <a href="index.php" class="btn">&larr; Back to Dashboard</a>
+    <h2>My Points Balance</h2>
+    <h1><?= number_format($points) ?> points</h1>
     <hr>
 
-    <section>
-        <h2>Available Cashback Rewards</h2>
+    <h2>Available Cashback Rewards</h2>
+    <?php if (!$rewards): ?><p>No rewards available.</p><?php endif; ?>
 
-        <?php if (empty($rewards)): ?>
-            <p>No cashback rewards are currently available.</p>
-        <?php else: ?>
+    <?php if ($rewards): ?>
+        <div class="reward-grid">
+        <?php foreach ($rewards as $r):
+            $required = (int)$r['points_required'];
+            $stock = (int)$r['stock'];
+            $canRedeem = $points >= $required && $stock > 0;
+        ?>
+            <div class="card reward-card">
+                <h3><?= e($r['reward_name']) ?></h3>
+                <p><?= e($r['description']) ?></p>
+                <h2><?= e(rm($r['cash_value'])) ?></h2>
+                <p>Points: <?= number_format($required) ?></p>
+                <p>Stock: <?= $stock ?></p>
 
-            <?php foreach ($rewards as $reward): ?>
-
-                <?php
-                $required = (int) $reward['points_required'];
-                $stock = (int) $reward['stock'];
-
-                $enoughPoints = $pointsBalance >= $required;
-                $inStock = $stock > 0;
-                $canRedeem = $enoughPoints && $inStock;
-                ?>
-
-                <div style="
-                    border: 1px solid #d7e4dc;
-                    border-radius: 12px;
-                    padding: 18px;
-                    margin: 15px 0;
-                ">
-
-                    <h3><?= e($reward['reward_name']) ?></h3>
-
-                    <p><?= e($reward['description']) ?></p>
-
-                    <p>
-                        <strong>Cashback:</strong>
-                        <?= e(rm($reward['cash_value'])) ?>
-                    </p>
-
-                    <p>
-                        <strong>Points Required:</strong>
-                        <?= $required ?> points
-                    </p>
-
-                    <p>
-                        <strong>Stock:</strong>
-                        <?= $stock ?>
-                    </p>
-
-                    <?php if (!$inStock): ?>
-
-                        <p>Out of stock</p>
-
-                    <?php elseif (!$enoughPoints): ?>
-
-                        <p>
-                            You need
-                            <?= $required - $pointsBalance ?>
-                            more points to redeem this reward.
-                        </p>
-
-                    <?php endif; ?>
-
-                    <form method="POST" action="redeem.php">
-                        <input
-                            type="hidden"
-                            name="csrf_token"
-                            value="<?= e($_SESSION['redeem_csrf']) ?>"
-                        >
-                        
-                        <input
-                            type="hidden"
-                            name="rewardID"
-                            value="<?= e($reward['rewardID']) ?>"
-                        >
-
-                        <button
-                            type="submit"
-                            class="btn btn-primary"
-                            <?= !$canRedeem ? 'disabled' : '' ?>
-                        >
-                            Redeem
-                        </button>
-                    </form>
-
-                </div>
-
-            <?php endforeach; ?>
-
-        <?php endif; ?>
-    </section>
-
-    <hr>
-
-    <section>
-        <h2>My Redemption History</h2>
-
-        <?php if (empty($redemptions)): ?>
-
-            <p>You haven't redeemed any rewards yet.</p>
-
-        <?php else: ?>
-
-            <div style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse;">
-                    <thead>
-                        <tr>
-                            <th>Reward</th>
-                            <th>Points Used</th>
-                            <th>Cashback</th>
-                            <th>Status</th>
-                            <th>Date</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        <?php foreach ($redemptions as $redemption): ?>
-                            <tr>
-                                <td><?= e($redemption['reward_name']) ?></td>
-                                <td><?= (int) $redemption['points_used'] ?></td>
-                                <td><?= e(rm($redemption['cash_value'])) ?></td>
-                                <td><?= e(ucfirst($redemption['status'])) ?></td>
-                                <td>
-                                    <?= e(nice_date(
-                                        $redemption['requested_at'],
-                                        true
-                                    )) ?>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                <form method="post" action="redeem.php">
+                    <input type="hidden" name="csrf_token" value="<?= e($_SESSION['redeem_csrf']) ?>">
+                    <input type="hidden" name="rewardID" value="<?= e($r['rewardID']) ?>">
+                    <button class="btn btn-primary" <?= !$canRedeem ? 'disabled' : '' ?>>
+                        <?= $canRedeem ? 'Redeem' : "Can't Redeem" ?>
+                    </button>
+                </form>
             </div>
+        <?php endforeach; ?>
+        </div>
+    <?php endif; ?>
 
-        <?php endif; ?>
-    </section>
+    <h2>My Redemption History</h2>
+    <?php if (!$redemptions): ?><p>No redemptions yet.</p><?php endif; ?>
 
+    <div class="table-wrap"><table>
+        <tr><th>Reward</th><th>Points Used</th><th>Cashback</th><th>Status</th><th>Date</th></tr>
+        <?php foreach ($redemptions as $r): ?>
+            <tr>
+                <td><?= e($r['reward_name']) ?></td>
+                <td><?= (int)$r['points_used'] ?></td>
+                <td><?= e(rm($r['cash_value'])) ?></td>
+                <td><?= e(ucfirst($r['status'])) ?></td>
+                <td><?= e(nice_date($r['requested_at'], true)) ?></td>
+            </tr>
+        <?php endforeach; ?>
+    </table></div>
     <hr>
 
-    <section>
-        <h2>Points Transaction History</h2>
+    <h2>Points Transaction History</h2>
+    <?php if (!$transactions): ?><p>No transactions yet.</p><?php endif; ?>
 
-        <?php if (empty($transactions)): ?>
-
-            <p>No points transactions yet.</p>
-
-        <?php else: ?>
-
-            <div style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse;">
-                    <thead>
-                        <tr>
-                            <th>Description</th>
-                            <th>Type</th>
-                            <th>Points</th>
-                            <th>Date</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        <?php foreach ($transactions as $transaction): ?>
-                            <tr>
-                                <td>
-                                    <?= e($transaction['description'] ?: '-') ?>
-                                </td>
-
-                                <td>
-                                    <?= e(ucfirst($transaction['txn_type'])) ?>
-                                </td>
-
-                                <td>
-                                    <?= (int) $transaction['points'] > 0 ? '+' : '' ?>
-                                    <?= (int) $transaction['points'] ?>
-                                </td>
-
-                                <td>
-                                    <?= e(nice_date(
-                                        $transaction['created_at'],
-                                        true
-                                    )) ?>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-
-        <?php endif; ?>
-    </section>
-
-
+    <div class="table-wrap"><table>
+        <tr><th>Description</th><th>Type</th><th>Points</th><th>Date</th></tr>
+        <?php foreach ($transactions as $t): ?>
+            <tr>
+                <td><?= e($t['description'] ?: '-') ?></td>
+                <td><?= e(ucfirst($t['txn_type'])) ?></td>
+                <td><?= $t['points'] > 0 ? '+' : '' ?><?= (int)$t['points'] ?></td>
+                <td><?= e(nice_date($t['created_at'], true)) ?></td>
+            </tr>
+        <?php endforeach; ?>
+    </table></div>
 </section>
+
 <?php require '../includes/student_bottom.php'; ?>
