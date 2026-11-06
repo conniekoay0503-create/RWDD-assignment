@@ -968,3 +968,6 @@ body.auth { min-height: 100vh; background: var(--pub-gradient); }
 @media print {
     .report { border: 0; padding: 0; }
 }
+
+/* The homepage is only this one screen, so the coloured area fills the whole screen height (100vh = 100% of the window height) */
+.landing .hero-wrap { min-height: 100vh; }
