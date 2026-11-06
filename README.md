@@ -1,73 +1,145 @@
-# E-Waste & Repair Café — Group 52 (Admin part: Koay Shin Shee, TP090995)
+# E-Waste & Repair Café
 
-## 1. 在 XAMPP 运行
-1. 把整个 `ewaste` 文件夹放进 `C:\xampp\htdocs\`。
-2. 打开 XAMPP Control Panel → Start **Apache** 和 **MySQL**。
-3. 打开 `http://localhost/phpmyadmin` → 上方 **Import** → 选 `database/ewaste_repair_cafe.sql` → Go。
-   （这个文件会自己建 database `ewaste_repair_cafe`，重新 import 会清掉旧资料，回到 demo 状态。）
-4. 打开 `http://localhost/ewaste/` 会先看到首页，再按 Log in / Sign up。
+RWDD assignment, Group 52, Asia Pacific University.
 
-如果 MySQL 有设密码，或 port 不是 3306，改 `config/db.php`。
+Students bring broken devices to the Green Hub (Block E). A student volunteer tries to repair them. Devices that cannot be repaired are either returned to the owner or recycled by a Recycling Officer. Students earn points for every device and can swap the points for APCard cashback.
 
-## 2. Demo 账号（密码全部是 `Password123`）
+| Role | Member | Folder |
+|---|---|---|
+| Admin | Koay Shin Shee (TP090995) | `admin/` |
+| Student | Genieve Ki Yi Nee (TP087791) | `student/` |
+| Recycling Officer | Jerald Long Jitson (TP087766) | `officer/` |
+| Repair Volunteer | Lim Wen Ying (TP091586) | `volunteer/` |
+
+Built with plain PHP 8 (mysqli), MySQL / MariaDB, HTML, CSS and JavaScript. No frameworks or libraries.
+
+---
+
+## 1. Run it on XAMPP
+
+1. Copy the project folder into `C:\xampp\htdocs\`, for example `C:\xampp\htdocs\RWDD-assignment\`.
+2. Open the XAMPP Control Panel and start **Apache** and **MySQL**.
+3. Open `http://localhost/phpmyadmin`:
+   1. Click **New**, create a database named `ewaste_repair_cafe` (collation `utf8mb4_general_ci`).
+   2. Select the new database, open the **Import** tab, choose `database/ewaste_repair_cafe.sql`, and click **Import**.
+4. Open `http://localhost/RWDD-assignment/` (use your own folder name). You will see the homepage. Click **Log in** or **Sign up**.
+
+If your MySQL has a password or does not use port 3306, change `config/db.php`.
+
+**Importing again:** the SQL file does not delete old tables. To reset the demo data, drop all tables in `ewaste_repair_cafe` first (select all tables, then **Drop**), then import again.
+
+## 2. Demo accounts
+
+Every password is `Password123`.
+
 | Role | Email |
 |---|---|
-| Admin | koay@mail.apu.edu.my / aisyah@mail.apu.edu.my |
-| Officer | jerald@mail.apu.edu.my |
-| Volunteer | lim@mail.apu.edu.my |
-| Student | genieve@mail.apu.edu.my, daniel@…, priya@…, meiling@…, arjun@…, siti@… |
-| Inactive（不能登入） | ken@mail.apu.edu.my |
+| Admin | koay@mail.apu.edu.my, aisyah@mail.apu.edu.my |
+| Recycling Officer | jerald@mail.apu.edu.my |
+| Repair Volunteer | lim@mail.apu.edu.my |
+| Student | genieve@mail.apu.edu.my, daniel@mail.apu.edu.my, priya@mail.apu.edu.my, meiling@mail.apu.edu.my, arjun@mail.apu.edu.my, siti@mail.apu.edu.my |
+| Deactivated (cannot log in) | ken@mail.apu.edu.my |
 
-Demo 资料的日期都是「import 那一刻往前推」，所以随时 import 都会有 1 台 overdue device、1 个进行中的 challenge。
+After logging in, each role goes to its own dashboard (`home_for()` in `includes/functions.php`).
 
-## 3. 文件结构
+## 3. Folder structure
+
 ```
-config/db.php            连接 database（mysqli）
-includes/functions.php   共用 function：e()、db_all/db_one/db_value/db_exec、notify()、notify_admins()、find_role()、require_role()
-includes/public_top.php  login / register 的上半部
-includes/admin_top.php   admin 页的上方栏（含药丸形导航 + 下拉子页面）+ page_head()（标题和 tab）；admin_bottom.php 关闭页面
-includes/icons.php       icon('名字') 画出 SVG 图标
-index.php                首页（未登入时看到；数字、类别、challenge、公告都从 database 读）
-login.php register.php logout.php
-admin/   每一区（上方导航栏）拆成几页，页面上方有 tab 可以切换：
-         index.php                    Dashboard
-         categories / category_form / calculator          Categories（列表 / 新增修改 / 计分器）
-         challenges / challenge_form                       Challenges（列表 / 新增修改）
-         cashback / cashback_history / rewards / reward_form   Cashback（待处理 / 记录 / 奖励列表 / 新增修改）
-         users / volunteer_requests / assign_officer       Users（全部用户 / 志愿者申请 / 指派 officer）
-         announcements / announcement_form                 Announcements（列表 / 发布修改）
-         feedback / feedback_view                          Feedback（收件箱 / 阅读并回复）
-         reports, profile, notifications
-student/ volunteer/ officer/   placeholder，组员换成自己的页面（保留最上面 require_role 那 3 行）
-assets/css/style.css     全站样式（没有 Bootstrap）
-assets/js/main.js        全站 JavaScript
-assets/img/              首页用的图（自己画的 SVG：手机画面、电路板背景）
-uploads/devices/         student 上传的 device 照片
+index.php                 Homepage (one screen: hero, live numbers, Log in / Sign up)
+login.php  register.php  logout.php
+
+config/db.php             Database connection (mysqli) and time zone (Asia/Kuala_Lumpur)
+
+includes/
+  functions.php           Shared functions (see section 6)
+  icons.php               icon('name') draws an SVG icon
+  public_top.php          Top of the login / register pages
+  admin_top.php    admin_bottom.php      Top bar + menu / closing tags for admin pages
+  student_top.php  student_bottom.php    Same for student pages
+  officer_top.php  officer_bottom.php    Same for officer pages
+  collection_deadlines.php               check_collection_deadlines(): sends "Overdue" notifications
+
+admin/      Dashboard, Categories (+ points calculator), Challenges, Cashback (requests, history, rewards),
+            Users (all users, volunteer requests, assign officer), Announcements, Feedback,
+            Reports (print / save as PDF), Profile, Notifications
+student/    Dashboard, Submit a Device, My Devices, Device Details, Points & Cashback, Redeem,
+            Challenges & Leaderboard, Feedback, Become a Volunteer, My Report, Notifications
+officer/    Dashboard, Recycling Queue, Process / Confirm Recycling, Abandoned Devices,
+            Recycling History, Recycling Statistics, Notifications
+volunteer/  Repair volunteer pages (work in progress, see section 9)
+
+assets/css/style.css      All styles for the whole website (no Bootstrap)
+assets/js/main.js         All JavaScript for the whole website
+assets/img/               SVG pictures for the homepage
+uploads/devices/          Device photos uploaded by students
+database/ewaste_repair_cafe.sql   Tables + demo data
 ```
 
-## 4. Presentation 可以讲的重点
-- **Prepared statements**：所有 SQL 都用 `?` 再 `bind_param`，用户输入不会变成 SQL 指令 → 防 SQL injection。
-- **password_hash / password_verify**：database 只存 hash，看不到真正密码。
-- **htmlspecialchars（`e()`）**：印出用户输入前先转义 → 防 XSS。
-- **Session + require_role()**：每个 admin 页第一行检查有没有登入、账号是否还 active、role 对不对。
-- **Transaction**：一件事要改好几张表时（例如批准 volunteer：更新 request → 删 student → 加 volunteer → 发 notification），用 `begin_transaction()`，任何一步失败就 `rollback()`，不会只做一半。
-- **「affected rows = 1」检查**：`UPDATE … WHERE status = 'pending'` 只有还在 pending 才会改到 1 行；如果两个 admin 同时按，第二个会改到 0 行 → 显示「已经被审核了」。
-- **PRG（Post → Redirect → Get）+ flash message**：表单送出后 redirect，按 F5 不会重复送出。
-- **Overdue 不用定时器**：XAMPP 没有自动排程，所以每次开页面时用 `DATEDIFF(NOW(), status_changed_at) > 7` 当场算。Challenge 的 Upcoming / Running / Ended 也是用今天日期当场算。
-- **Client + server validation**：JavaScript 先检查（快），PHP 一定再检查一次（安全，因为 JS 可以被关掉）。
-- **Dark mode / 字体大小**：CSS 变量 + `rem`；JavaScript 把选择存进 localStorage（用 try…catch 包住）。
+Every page inside `admin/`, `student/`, `officer/` and `volunteer/` starts with the same 3 lines. Keep them:
 
-## 5. 给组员：通知 Admin
-Student 做了需要 admin 处理的事（兑换 cashback、送 feedback、申请当 volunteer）时，请在 INSERT 之后加一行：
 ```php
-notify_admins($conn, 'New cashback request', $name . ' redeemed RM2 Cashback.');
+require '../config/db.php';
+require '../includes/functions.php';
+require_role($conn, 'student', '../');   // 'admin' / 'student' / 'officer' / 'volunteer'
 ```
-它会发给每一个 active 的 admin，admin 右上角的铃铛就会出现红点数字。
 
-## 6. 给组员：ID 前缀（很重要）
-所有 ID 都是「前缀 + 3 位数字」的 VARCHAR(10)，**不是** AUTO_INCREMENT，所以 INSERT 时一定要自己给 ID：
+`require_role()` checks that the user is logged in, that the account is still active, and that the role is correct. Otherwise it sends the user back to the login page.
 
-| 表 | 前缀 | 例子 |
+## 4. Device status flow (15 statuses)
+
+```
+Submitted ──> Dropped Off ──> Claimed ──> In Repair
+   │               │                         │
+   └─> Cancelled   └─> Returned Unclaimed    ├─> Ready for Collection ──> Completed
+                       (no volunteer          │     (repaired)
+                        claimed it in         │
+                        7 days)               └─> Pending Consent   (cannot be repaired)
+                                                    ├─> Awaiting Recycle ──> Recycled         (student allows recycling)
+                                                    └─> Return Requested ──> Returned Unrepaired ──> Collected Unrepaired
+                                                                                                    (student wants it back)
+If a device is not collected in time, the officer can set it to Disposed.
+```
+
+Who changes what:
+- **Student**: Submitted, Dropped Off, Cancelled, Awaiting Recycle / Return Requested (the choice after Pending Consent), Completed, Collected Unrepaired.
+- **Volunteer**: Claimed, In Repair, Ready for Collection, Pending Consent, Returned Unrepaired (after taking the device back to the Green Hub counter).
+- **Officer**: Recycled, Disposed.
+
+Every status change must also INSERT one row into `device_status_history`, so the student can see the timeline.
+
+**7-day rules.** XAMPP has no scheduler, so these are worked out with `DATEDIFF()` / `INTERVAL 7 DAY` each time a page opens:
+- Waiting to be collected (Ready for Collection, Returned Unrepaired, Returned Unclaimed) for more than 7 days: the device counts as **overdue** on the admin dashboard, and `check_collection_deadlines()` notifies the owner, the admins and the officers.
+- Pending Consent and Return Requested for more than 7 days also count as overdue on the admin dashboard. An officer must **not** dispose a Return Requested device, because the student has asked for it back.
+
+## 5. Points and cashback
+
+**Points** (each category has a multiplier and a max):
+
+```
+points = MIN( FLOOR(weight_kg × multiplier), max_points )
+repaired device: the student gets × 2 (still capped at max_points)
+the volunteer who repaired it gets the normal amount
+```
+
+Example: Phone / Tablet, multiplier 500, max 300. A 0.2 kg phone is worth 0.2 × 500 = 100 points, or 200 if it is repaired.
+
+Balance = `SUM(points)` from `points_transactions` (earn and bonus rows are positive, redeem rows are negative).
+
+**Cashback:**
+1. The student redeems a reward. A `pending` redemption is created, a negative `redeem` transaction is added, and **1 is taken from the reward's stock straight away**, so two students cannot get the last one.
+2. The admin approves it and pays the amount to the APCard linked to the student's email. The stock is not reduced again.
+3. Or the admin rejects it. The `redeem` transaction is deleted (the points come back) and the stock goes back up by 1.
+
+Rules on the admin Rewards page:
+- A reward that has already been redeemed cannot be deleted, because that would break the cashback history. Set the stock to 0 to stop offering it.
+- A new reward cannot have the same cash value as a reward that is still in stock.
+
+## 6. Notes for the team
+
+### IDs are prefixed strings
+All IDs are VARCHAR(10), "prefix + 3 digits", **not** AUTO_INCREMENT. Give the ID yourself when you INSERT:
+
+| Table | Prefix | Example |
 |---|---|---|
 | announcements | A | A001 |
 | categories | C | C001 |
@@ -81,27 +153,53 @@ notify_admins($conn, 'New cashback request', $name . ' redeemed RM2 Cashback.');
 | rewards | RW | RW001 |
 | volunteer_request | VR | VR001 |
 
-用 `functions.php` 里的 `next_id()` 拿下一个号码：
 ```php
-$deviceID = next_id($conn, 'devices', 'deviceID', 'D');   // 例如 'D016'
+$deviceID = next_id($conn, 'devices', 'deviceID', 'D');   // e.g. 'D017'
 db_exec($conn, "INSERT INTO devices (deviceID, submitted_by, ...) VALUES (?, ?, ...)", 'ss...', [$deviceID, $tp, ...]);
 ```
-bind_param 里 ID 的类型是 `'s'`（字符串），不是 `'i'`。`notify()` 已经自己处理 notification 的 ID。
+In `bind_param` the type of an ID is `'s'` (string), not `'i'`.
 
-## 7. 给组员：新 status「Return Requested」
-不能修的 device 现在的流程是：
-```
-Pending Consent ──(student 同意回收)──> Awaiting Recycle ──(officer)──> Recycled
-               └─(student 要拿回)──> Return Requested ──(volunteer 拿回 Green Hub 柜台)──> Returned Unrepaired ──(student 领回)──> Collected Unrepaired
-```
-- **Student 页**：按「我要拿回」时，status 改成 `'Return Requested'`（以前是直接改成 `'Returned Unrepaired'`）。
-- **Volunteer 页**：多一个按钮，把 `'Return Requested'` 改成 `'Returned Unrepaired'`，记得同时 INSERT 一行 device_status_history。
-- **7 天规则**：`Return Requested` 超过 7 天会算进 admin dashboard 的 overdue（表示 volunteer 太慢）。但 **officer 不能 dispose** 这个 status 的 device，因为学生已经说要拿回了。
-- **Returned Unclaimed**：`Dropped Off` 之后 7 天都没有 volunteer claim，`volunteer/repair_queue.php` 会把它改成 `'Returned Unclaimed'`，学生去 Green Hub 领回。它在 admin dashboard 用红色标签显示；超过 7 天还没领，也会算进 overdue。
-  （database 要先跑 `ALTER TABLE ... 'Returned Unclaimed'` 那段 SQL；zip 里的 `ewaste_repair_cafe.sql` 已经包含了。）
+### Shared functions (`includes/functions.php`)
+| Function | What it does |
+|---|---|
+| `e($text)` | `htmlspecialchars()`: use it every time you print user input |
+| `db_all` / `db_one` / `db_value` / `db_exec` | Run a prepared statement and return all rows / one row / one value / affected rows |
+| `next_id($conn, $table, $column, $prefix)` | Next ID such as `D017` |
+| `notify($conn, $tp, $title, $message)` | Send a notification to one user (it makes the N-ID itself) |
+| `notify_admins($conn, $title, $message)` | Send a notification to every active admin |
+| `set_flash($type, $msg)` + `redirect($url)` | Show a message on the next page (Post → Redirect → Get) |
+| `require_role($conn, $role, $base)` | Page guard (see section 3) |
+| `rm($amount)`, `nice_date($date)` | Format money (`RM 5.00`) and dates |
 
-## 8. 给组员：Pop-up 讯息和确认（main.js 自动处理，用浏览器的 alert() / confirm()）
-- **确认**：在 `<form>`（或按钮）加 `data-confirm="Delete this device?"`，按下时会先跳出 confirm() pop-up，按 OK 才送出，按 Cancel 不会送出。链接 `<a data-confirm="...">` 也可以。
-- **检查表单**：`<form novalidate data-validate>` 会检查 required / email / 数字 / pattern，错误会在格子下面显示，同时用 alert() 列出全部错误。
-- **PHP 讯息**：`set_flash('error', '...')` / `set_flash('success', '...')` 在下一页显示成红色 / 绿色框；错误的还会用 alert() 跳出来，成功的只显示绿色框。
-- **数字格子**：`<input type="number" step="1">` 只能打整数，打字母会马上提示；`step="0.01"` 可以打小数点。
+When a student does something an admin must handle (redeems cashback, sends feedback, asks to be a volunteer), call `notify_admins()` after the INSERT. The admin's bell then shows a red number.
+
+### Pop-up messages and confirmations (handled by `main.js`)
+- **Confirm before saving or deleting:** add `data-confirm="Delete this device?"` to a `<form>`, a submit button or a link. The browser's `confirm()` pop-up appears, and the form is only sent if the user presses OK.
+- **Check a form before it is sent:** `<form novalidate data-validate>`. It checks `required`, `email`, `min` / `max`, `maxlength` and `pattern`. Each error appears under its box, and `alert()` lists all of them.
+- **Number boxes:** `<input type="number" step="1">` only accepts whole numbers. Typing a letter shows a message straight away. Use `step="0.01"` to allow a decimal point.
+- **Messages from PHP:** `set_flash('error', '...')` shows a red box on the next page and also pops up with `alert()`. `set_flash('success', '...')` shows a green box only.
+
+## 7. Points to explain in the presentation
+
+- **Prepared statements**: every SQL statement uses `?` and `bind_param`, so user input can never become part of the SQL command. This prevents SQL injection.
+- **password_hash / password_verify**: the database only stores a hash, never the real password.
+- **htmlspecialchars (`e()`)**: user input is escaped before it is printed. This prevents XSS.
+- **Session + require_role()**: every page checks login, active account and role on its first lines.
+- **Transactions**: when one action changes several tables (for example, approving a volunteer: update the request, remove the student row, add the volunteer row, send a notification), it runs inside `begin_transaction()`. If any step fails, `rollback()` undoes all of them, so nothing is half done.
+- **"Affected rows = 1" check**: `UPDATE ... WHERE status = 'pending'` changes 1 row only while the request is still pending. If two admins press Approve at the same time, the second one changes 0 rows and sees "already reviewed".
+- **PRG (Post → Redirect → Get) + flash messages**: after a form is sent the page redirects, so pressing F5 does not send it twice.
+- **Client + server validation**: JavaScript checks first (fast feedback), and PHP always checks again (safe, because JavaScript can be turned off).
+- **Time zone**: PHP and MySQL both use Malaysia time (UTC+8), set in `config/db.php`. XAMPP's default is Europe/Berlin, which would make every time 7 hours behind.
+- **rem units**: sizes in `style.css` use `rem`, so the page follows the user's browser font-size setting.
+
+## 8. Before you push to GitHub
+
+1. Run `git status` and check that only your own files changed.
+2. Do not commit `config/db.php` if you changed the password in it for your own computer.
+3. Tell the team when you change a shared file (`includes/`, `assets/css/style.css`, `assets/js/main.js`, `admin/cashback.php`), because it affects every role.
+
+## 9. Known limitations
+
+- `next_id()` uses MAX + 1. If two people insert into the same table at exactly the same moment, they could get the same ID and the second INSERT fails. This is acceptable for the assignment.
+- Challenge bonus points are not given automatically. The student page shows progress only.
+- The `volunteer/` folder is not connected yet. Its pages still need to be moved into place: the top / bottom files go to `includes/`, `volunteer.css` goes into `assets/css/style.css`, and each page needs `require_role($conn, 'volunteer', '../')`.

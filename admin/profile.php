@@ -59,7 +59,7 @@ $user = db_one($conn, "SELECT u.*, a.assigned_at, b.name AS assigned_by_name
 $page_title = 'My profile';
 $active = '';
 require '../includes/admin_top.php';
-page_head('user', 'My profile', 'Your details, password and display preferences.');
+page_head('user', 'My profile', 'Your details and password.');
 ?>
 
 <div class="profile-layout" data-tabs>
@@ -67,7 +67,6 @@ page_head('user', 'My profile', 'Your details, password and display preferences.
         <button type="button" role="tab" data-tab="details"><?= icon('id') ?> Personal details</button>
         <button type="button" role="tab" data-tab="password"><?= icon('key') ?> Password</button>
         <button type="button" role="tab" data-tab="role"><?= icon('shield') ?> My role</button>
-        <button type="button" role="tab" data-tab="preferences"><?= icon('sliders') ?> Preferences</button>
         <button type="button" role="tab" data-tab="account"><?= icon('lock') ?> Account</button>
     </nav>
 
@@ -134,27 +133,6 @@ page_head('user', 'My profile', 'Your details, password and display preferences.
             <dt>Assigned on</dt><dd><?= nice_date($user['assigned_at']) ?></dd>
         </dl>
         <p class="muted">Admins manage categories, challenges, cashback, users, announcements and reports.</p>
-    </section>
-
-    <section class="card tab-panel" id="preferences" role="tabpanel">
-        <h2>Preferences</h2>
-        <p class="muted">Saved in this browser only.</p>
-        <div class="pref-row">
-            <span>Dark mode</span>
-            <button type="button" class="btn btn-outline btn-sm" data-theme-toggle><?= icon('moon') ?> Toggle dark mode</button>
-        </div>
-        <div class="pref-row">
-            <span>Text size</span>
-            <div class="text-size">
-                <button type="button" data-text-size="-1" aria-label="Smaller text">A-</button>
-                <span data-text-size-label>100%</span>
-                <button type="button" data-text-size="1" aria-label="Larger text">A+</button>
-            </div>
-        </div>
-        <div class="pref-row">
-            <span>Reset to default</span>
-            <button type="button" class="btn btn-outline btn-sm" data-reset-prefs><?= icon('history') ?> Reset</button>
-        </div>
     </section>
 
     <section class="card tab-panel" id="account" role="tabpanel">

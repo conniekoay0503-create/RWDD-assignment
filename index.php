@@ -32,7 +32,6 @@ $stats = [
     <header class="land-nav">
         <a class="brand" href="index.php"><span class="brand-mark"><?= icon('recycle', 'icon-spin-hover') ?></span><span class="brand-text">E-Waste &amp; Repair Café</span></a>
         <div class="land-actions">
-            <button type="button" class="icon-btn" data-theme-toggle aria-label="Toggle dark mode" title="Dark mode"><?= icon('moon', 'theme-moon') ?><?= icon('sun', 'theme-sun') ?></button>
             <?php if ($logged_in): ?>
                 <a class="btn btn-primary" href="<?= e(home_for($_SESSION['role'])) ?>"><?= icon('home') ?> My dashboard</a>
             <?php else: ?>

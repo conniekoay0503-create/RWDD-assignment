@@ -114,35 +114,6 @@ $initial = strtoupper(substr($_SESSION['name'] ?? 'S', 0, 1));
     <!-- SAME TOPBAR TOOLS AS ADMIN -->
     <div class="topbar-tools">
 
-        <!-- TEXT SIZE -->
-        <div class="text-size" aria-label="Text size">
-            <button
-                type="button"
-                data-text-size="-1"
-                aria-label="Smaller text"
-            >A-</button>
-
-            <span data-text-size-label>100%</span>
-
-            <button
-                type="button"
-                data-text-size="1"
-                aria-label="Larger text"
-            >A+</button>
-        </div>
-
-        <!-- DARK MODE -->
-        <button
-            type="button"
-            class="icon-btn"
-            data-theme-toggle
-            aria-label="Toggle dark mode"
-            title="Dark mode"
-        >
-            <?= icon('moon', 'theme-moon') ?>
-            <?= icon('sun', 'theme-sun') ?>
-        </button>
-
         <!-- NOTIFICATION DROPDOWN -->
         <div class="dropdown">
 

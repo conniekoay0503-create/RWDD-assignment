@@ -224,28 +224,6 @@ function officer_page_head(
     <!-- TOPBAR TOOLS -->
     <div class="topbar-tools">
 
-        <!-- TEXT SIZE -->
-        <div class="text-size" aria-label="Text size">
-            <button type="button"
-                    data-text-size="-1">A-</button>
-
-            <span data-text-size-label>100%</span>
-
-            <button type="button"
-                    data-text-size="1">A+</button>
-        </div>
-
-        <!-- DARK MODE -->
-        <button type="button"
-                class="icon-btn"
-                data-theme-toggle
-                aria-label="Toggle dark mode"
-                title="Dark mode">
-
-            <?= icon('moon', 'theme-moon') ?>
-            <?= icon('sun', 'theme-sun') ?>
-        </button>
-
         <!-- NOTIFICATIONS -->
         <div class="dropdown">
 

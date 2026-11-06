@@ -3,10 +3,8 @@
  *  - rem = "root em". 1rem equals the font size of the root element <html>.
  *  - Browsers set <html> to 16px by default, so 1rem = 16px, 0.5rem = 8px, 1.5rem = 24px.
  *  - Why we use rem instead of px:
- *      1. The A- / A+ buttons (main.js) change the <html> font size, e.g. to 125%.
- *         Every rem value then grows with it (1rem becomes 20px), so the whole page scales together.
- *      2. If a user sets a bigger default font in their browser settings (for poor eyesight),
- *         rem follows that setting, but px would ignore it. This makes the site more accessible.
+ *      If a user sets a bigger default font in their browser settings (for poor eyesight),
+ *      rem follows that setting, but px would ignore it. This makes the site more accessible.
  *  - rem vs em: em is relative to the PARENT element's font size, so it can stack up inside
  *    nested elements; rem always looks at <html> only, so it is easier to predict.
  */
@@ -70,48 +68,6 @@
      --ring: 0 0 0 4px rgba(63, 179, 127, 0.3);
 }
 
-/*Dark mode is optional (moon button). It only swaps the variables. */
-[data-theme="dark"] {
-    --bg: #121915;
-    --surface: #1a231e;
-    --surface-2: #222d27;
-    --text: #e4ece6;
-    --muted: #9cada2;
-    --border: #2e3b33;
-    --primary: #5bc893;
-    --primary-dark: #e4ece6;
-    --primary-press: #4fb383;
-    --primary-soft: #1e3a2a;
-
-    --accent: #7fd6ad;
-    --accent-hover: #95e0bd;
-    --sun: #f3d774;
-    --sun-hover: #f7e08f;
-    --sun-soft: #33301c;
-    --ink: #10201a;
-    --danger: #ef8174;
-    --danger-soft: #3a201d;
-    --warn: #e9b55a;
-    --warn-soft: #362b15;
-
-    --mint-bg: #1d3a2a;  
-    --mint-fg: #7fd3a2;
-
-    --sky-bg: #1a2e3d;   
-    --sky-fg: #8cc3ea;
-
-    --gold-bg: #382d14;  
-    --gold-fg: #eec26a;
-
-    --rose-bg: #3a1f28;  
-    --rose-fg: #f0a3b8;
-
-    --red-bg: #3a201d;   
-    --red-fg: #ef8174;
-
-    --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-    --ring: 0 0 0 4px rgba(91, 184, 130, 0.3);
-}
 
 /* 2. Base */
 /* Apply border-box sizing to all elements */
@@ -141,7 +97,6 @@ h2 { font-size: 1.2rem; font-weight: 700; }
 h3 { font-size: 1.05rem; font-weight: 700; }
 p { margin: 0 0 0.8rem; }
 a { color: var(--ink); text-decoration-color: var(--primary); text-decoration-thickness: 2px; text-underline-offset: 3px; }
-[data-theme="dark"] a { color: var(--text); }
 a:not([class]):hover { background: var(--primary-soft); border-radius: 4px; }
 small { font-size: 0.82rem; }
 .muted { color: var(--muted); }
@@ -233,11 +188,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .link-arrow .icon, .link-btn .icon { color: var(--primary); }
 .link-arrow .icon { transition: transform 0.15s; }
 .link-arrow:hover .icon { transform: translateX(3px); }
-
-/* Moon / sun icon on the dark-mode button */
-.theme-sun { display: none; }
-[data-theme="dark"] .theme-sun { display: inline; }
-[data-theme="dark"] .theme-moon { display: none; }
 
 /* 4. Forms */
 .field { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 1rem; flex: 1; min-width: 0; }
@@ -338,7 +288,6 @@ input[type="range"] { width: 100%; accent-color: var(--primary); margin-top: 0.4
 .status-ready-for-collection, .status-completed { background: var(--mint-bg); color: var(--mint-fg); }
 .status-pending-consent, .status-return-requested, .status-returned-unrepaired, .status-returned-unclaimed { background: var(--red-bg); color: var(--red-fg); }
 .status-awaiting-recycle, .status-recycled { background: #e3f3f1; color: #23736a; }
-[data-theme="dark"] .status-awaiting-recycle, [data-theme="dark"] .status-recycled { background: #183330; color: #74c7b7; }
 
 /* Icon in a soft coloured square */
 .stat-icon { display: inline-grid; place-items: center; width: 2.7rem; height: 2.7rem; border-radius: 14px; flex-shrink: 0; position: relative; }
@@ -376,11 +325,6 @@ input[type="range"] { width: 100%; accent-color: var(--primary); margin-top: 0.4
 .brand-mark .icon { width: 1.3rem; height: 1.3rem; }
 .topbar-tools { display: flex; align-items: center; gap: 0.5rem; }
 
-.text-size { display: flex; align-items: center; gap: 0.15rem; border: 1.5px solid var(--border); border-radius: 999px; padding: 0.12rem; background: var(--surface); }
-.text-size button { border: 0; background: transparent; padding: 0.22rem 0.55rem; border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 0.82rem; }
-.text-size button:hover { background: var(--surface-2); }
-.text-size button:active { background: var(--primary-soft); transform: scale(0.92); }
-.text-size span { font-size: 0.76rem; min-width: 2.5rem; text-align: center; color: var(--muted); }
 
 /* Log out: always visible, red so it is easy to find */
 .btn-logout { background: var(--danger-soft); color: var(--danger); padding: 0.5rem 0.95rem; }
@@ -471,7 +415,6 @@ body.app {
     background-repeat: no-repeat;
 }
 .content { max-width: 1280px; margin: 0 auto; padding: 1.75rem 1.5rem 3rem; min-height: calc(100vh - 12rem); }
-.site-footer { text-align: center; padding: 1.3rem; font-size: 0.82rem; color: var(--muted); border-top: 1px solid var(--border); }
 
 /* 7. Page header, tabs, cards */
 .page-head { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.1rem; flex-wrap: wrap; }
@@ -721,7 +664,6 @@ blockquote { margin: 0; padding: 0.7rem 0.95rem; border-left: 4px solid var(--pr
 .info-list { display: grid; grid-template-columns: 9rem 1fr; gap: 0.6rem 1rem; margin: 0 0 1rem; }
 .info-list dt { color: var(--muted); }
 .info-list dd { margin: 0; }
-.pref-row { display: flex; justify-content: space-between; align-items: center; padding: 0.8rem 0; border-bottom: 1px solid var(--border); gap: 1rem; }
 
 /* Placeholder pages for the other roles */
 .placeholder { max-width: 30rem; margin: 5rem auto; text-align: center; }
@@ -746,9 +688,6 @@ blockquote { margin: 0; padding: 0.7rem 0.95rem; border-left: 4px solid var(--pr
                     radial-gradient(ellipse at 88% 10%, rgba(253, 230, 138, 0.5), transparent 45%),
                     radial-gradient(ellipse at 5% 90%, rgba(166, 231, 200, 0.45), transparent 50%),
                     linear-gradient(160deg, #e3f7ed 0%, #fbfdf9 48%, #fff4cf 100%);
-}
-[data-theme="dark"] {
-    --pub-gradient: url("../img/circuit.svg"), linear-gradient(160deg, #13261c 0%, #121915 50%, #142330 100%);
 }
 .landing :focus-visible { outline-color: var(--primary); }
 
@@ -809,8 +748,6 @@ blockquote { margin: 0; padding: 0.7rem 0.95rem; border-left: 4px solid var(--pr
 .tile-gold .stat-icon { color: #9a6400; }
 .tile-sky { background: linear-gradient(150deg, #dff0f8, #c5e2f1); }
 .tile-sky .stat-icon { color: #2b6a96; }
-[data-theme="dark"] .tile-mint, [data-theme="dark"] .tile-gold, [data-theme="dark"] .tile-sky { background: var(--surface); border-color: var(--border); }
-[data-theme="dark"] .tile .stat-icon { background: var(--surface-2); }
 
 .split { display: grid; grid-template-columns: 1fr 1.15fr; gap: 3.5rem; align-items: center; }
 .split .muted { font-size: 1.05rem; }
@@ -868,7 +805,6 @@ body.auth { min-height: 100vh; background: var(--pub-gradient); }
 
 /* 11. Responsive */
 @media (max-width: 1280px) {
-    .topbar .text-size { display: none; }
     .brand small { display: none; }
 }
 @media (max-width: 1100px) {
@@ -917,7 +853,6 @@ body.auth { min-height: 100vh; background: var(--pub-gradient); }
     .hero-phones { height: 340px; }
     .phone { width: 165px; }
     .land-nav { padding: 1rem; gap: 0.6rem; }
-    .land-nav .text-size { display: none; }
     .reward-card, .challenge-card { padding: 1.8rem; }
     .final-cta { margin: 1rem 1rem 3rem; padding: 2.6rem 1.4rem; }
     .dropdown-panel, .user-panel { position: fixed; top: 4rem; left: 0.5rem; right: 0.5rem; width: auto; max-width: none; }
@@ -927,7 +862,7 @@ body.auth { min-height: 100vh; background: var(--pub-gradient); }
 
 /* 12. Print (Reports → Print / Save as PDF) */
 @media print {
-    .topbar, .site-footer, .no-print, .skip-link, .alert, .page-head, .subtabs { display: none !important; }
+    .topbar, .no-print, .skip-link, .alert, .page-head, .subtabs { display: none !important; }
     body, body.app { background: #fff; color: #000; font-size: 11pt; }
     .content { padding: 0; max-width: none; }
     .card, .stat-card { box-shadow: none; border: 1px solid #bbb; break-inside: avoid; }
