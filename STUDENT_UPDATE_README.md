@@ -4,7 +4,7 @@
 - Updated all Student pages to use the prefixed VARCHAR IDs in the latest SQL (D, C, H, F, N, R, RW, T, VR, CH).
 - Added `Return Requested` as the student choice when a repair is unsuccessful. The volunteer must set `Returned Unrepaired` after returning the item to Green Hub, before the student can mark it collected.
 - Shared Student navigation, dashboard, page cards and responsive CSS matching the existing Admin design system.
-- Added `includes/student_top.php`, `includes/student_bottom.php`, `assets/css/student.css`.
+- Added `includes/student_top.php`, `includes/student_bottom.php`. (The student styles were in `assets/css/student.css`; they are now section 14 at the end of `assets/css/style.css`.)
 - Fixed Admin cashback integration: student redemption reserves one stock item; approval does not deduct again; rejection restores reserved stock. The Admin rejection still deletes the original redeem transaction as in the team's existing code.
 
 ## Installation

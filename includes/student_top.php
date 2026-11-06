@@ -61,7 +61,6 @@ $initial = strtoupper(substr($_SESSION['name'] ?? 'S', 0, 1));
     </title>
 
     <link rel="stylesheet" href="../assets/css/style.css">
-    <link rel="stylesheet" href="../assets/css/student.css">
 
     <script src="../assets/js/main.js" defer></script>
 </head>
