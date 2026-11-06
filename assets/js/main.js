@@ -146,15 +146,33 @@ document.addEventListener('click', function (event){
 // === 5. Form validation (forms with data-validate) ===
 // The server (PHP) always checks again - this only gives faster feedback
 // Check user input and return an error message if the input is invalid.
+// Get the label text of a field, e.g. "Bonus points".
+// The label also holds an icon (<svg>) and sometimes a counter like "(0 / 255)" (<small>),
+// so we copy the label, remove those parts, and keep only the words.
+function fieldLabel(input) {
+    if (!input.labels || !input.labels[0]) return 'This field';
+    var copy = input.labels[0].cloneNode(true);
+    copy.querySelectorAll('svg, small, input').forEach(function (part) { part.remove(); });
+    return copy.textContent.trim() || 'This field';
+}
+
+// Whole numbers only? <input type="number" step="1"> (or no step) = whole number, step="0.01" = decimals allowed
+function wholeNumberOnly(input) {
+    var step = input.getAttribute('step');
+    return step === null || step === '1';
+}
+
 function fieldError(input){ //// Validate a form field and return an error message if invalid
     // Get the input value and remove extra spaces
     var value = input.value.trim();
     // Get the field label or use a default name if no label exists
-    var label = input.labels && input.labels [0] ? input.labels[0].firstChild.textContent.trim() : 'This field';
+    var label = fieldLabel(input);
 
     if (input.type === 'checkbox') {
         return input.required && !input.checked ? 'Please tick this box to continue.' : '';
     }
+    // badInput = the browser could not read the box as a number (e.g. letters were pasted in)
+    if (input.type === 'number' && input.validity.badInput) return label + ' only accepts numbers (digits 0-9).';
     if (input.required && value === '') return label + ' is required.';
     if(value === '') return '';
     // Check whether the email address follows a valid basic format
@@ -169,6 +187,7 @@ function fieldError(input){ //// Validate a form field and return an error messa
         var n = Number(value);
         // isNaN(n): is not a number (Check whether the entered value is a valid number)
         if (isNaN(n)) return label + ' must be a number.';
+        if (wholeNumberOnly(input) && !Number.isInteger(n)) return label + ' must be a whole number (no decimals).';
         // Check Minimum Length
         if (input.min !== '' && n < Number (input.min)) return label + ' must be at least ' + input.min + '.';
         if (input.max !== '' && n > Number(input.max)) return label + ' must be at most ' + input.max + '.';
@@ -199,43 +218,90 @@ function showFieldError(input, message){
     input.setAttribute('aria-invalid', message ? 'true' : 'false');
 }
 
-// Validate all eligible fields within the specified form
+// Validate all eligible fields within the specified form.
+// Returns a list of error messages (an empty list means the form is OK).
 function validateForm(form){
+    var messages = [];
     var firstBad = null;
     // Select and loop through all input, select and textarea elements
     form.querySelectorAll('input, select, textarea').forEach(function(input){
         if(input.type === 'hidden' || input.disabled) return;
         var message = fieldError(input);
         showFieldError(input, message);
-        if(message && !firstBad) firstBad = input;
+        if (message) {
+            messages.push(message);
+            if (!firstBad) firstBad = input;
+        }
     });
-    if (firstBad) firstBad.focus();
-    return firstBad === null;
+    if (firstBad) {
+        // Show every problem in one pop-up (one per line), then put the cursor in the first wrong box
+        alert('Please check the form:\n\n- ' + messages.join('\n- '));
+        firstBad.focus();
+    }
+    return messages;
 }
+
+// Remember which boxes the user has typed in ("touched")
+document.addEventListener('input', function (event) {
+    var input = event.target;
+    if (!input.form || !input.form.hasAttribute('data-validate')) return;
+    input.setAttribute('data-touched', 'yes');
+    // If this box is showing an error, check it again while the user types,
+    // so the message goes away as soon as it is fixed (and the Save button does not jump when clicked)
+    if (input.getAttribute('aria-invalid') === 'true') showFieldError(input, fieldError(input));
+});
 
 // Validate individual form fields when users move away from them, without waiting for the entire form to be submitted.
 //focusout: when user move to other input, will trigger this event
+// Only check a box the user has typed in, so clicking a tab while the box is still empty does not show "is required".
 document.addEventListener('focusout', function (event) {
     // Get the form associated with the current input element
     var form = event.target.form;
-    // Validate only form fields inside forms with the data-validate attribute
-    if (form && form.hasAttribute('data-validate') && event.target.matches ('input, select, textarea')){
+    // Validate only form fields inside forms with the data-validate attribute, and only if the user typed in it
+    if (form && form.hasAttribute('data-validate') && event.target.matches ('input, select, textarea')
+        && event.target.hasAttribute('data-touched')){
         // Validate the current field and display or clear its error message
         showFieldError(event.target, fieldError(event.target));
     }
 });
 
-// On submit: Validate the form first, then ask for confirmation before allowing submission (data-confirm on the form)
+// Remove all error messages inside a box (used when the user switches profile tab)
+function clearErrors(container) {
+    container.querySelectorAll('.field-error').forEach(function (box) { box.textContent = ''; });
+    container.querySelectorAll('.has-error').forEach(function (holder) { holder.classList.remove('has-error'); });
+    container.querySelectorAll('[aria-invalid]').forEach(function (input) { input.removeAttribute('aria-invalid'); });
+    container.querySelectorAll('[data-touched]').forEach(function (input) { input.removeAttribute('data-touched'); });
+}
+
+// Number boxes: stop letters as soon as they are typed and say why
+document.addEventListener('keydown', function (event) {
+    var input = event.target;
+    if (!input.matches || !input.matches('input[type="number"]')) return;
+    // Let through keys like Backspace, Tab, arrows (their name is longer than 1 letter) and Ctrl / Cmd shortcuts
+    if (event.key.length !== 1 || event.ctrlKey || event.metaKey) return;
+    var allowed = wholeNumberOnly(input) ? /[0-9]/ : /[0-9.]/;
+    if (!allowed.test(event.key)) {
+        event.preventDefault();   // the letter never appears in the box
+        showFieldError(input, fieldLabel(input) + (wholeNumberOnly(input)
+            ? ' only accepts whole numbers (digits 0-9).'
+            : ' only accepts numbers (digits 0-9 and a dot).'));
+    }
+});
+
+// On submit: Validate the form first, then ask for confirmation before allowing submission (data-confirm on the form or on the button pressed)
 document.addEventListener('submit', function (event) {
     // Get the form that triggered the submission event
     var form = event.target;
-    if (form.hasAttribute('data-validate') && !validateForm(form)) {
+    if (form.hasAttribute('data-validate') && validateForm(form).length > 0) {
         // Prevent form submission when validation fails
         event.preventDefault();
         return;
     }
-    // Ask the user to confirm before submitting the form
-    if (form.hasAttribute('data-confirm') && !confirm(form.getAttribute('data-confirm'))) {
+    // The question can be on the button that was pressed or on the form
+    var button = event.submitter;
+    var question = (button && button.getAttribute('data-confirm')) || form.getAttribute('data-confirm');
+    // Ask the user to confirm before submitting the form (Cancel = stop, nothing is saved)
+    if (question && !confirm(question)) {
         event.preventDefault();
     }
 });
@@ -311,10 +377,17 @@ function filterTable(tableId) {
 // 7b. List: text search (data-filter-list)
 function filterList(listId, text) {
     var list = document.getElementById(listId);
+    var found = 0;
     list.querySelectorAll('li').forEach(function (item) {
         // Add or remove the filtered-out class based on the search result.
-        item.classList.toggle('filtered-out', item.textContent.toLowerCase().indexOf(text) === -1);
+        var match = item.textContent.toLowerCase().indexOf(text) !== -1;
+        item.classList.toggle('filtered-out', !match);
+        // Count the item if it matches.
+        if (match) found++;
     });
+    // Show "No activity matches your search." when nothing matches
+    var none = document.querySelector('[data-no-results-for="' + listId + '"]');
+    if (none) none.hidden = found > 0;
     // Apply the display limit to the filtered list.
     applyShowLimit(list);
 }
@@ -396,19 +469,29 @@ function updateCalculator() {
 
     // Apply the same calculation rule as the server.
     // Same rule as the server: MIN(weight x multiplier (x2 if repaired), max), rounded down
-    var repaired = Math.min(Math.floor(weight * multiplier * 2), max);
-    // Calculate recycled points without doubling the multiplier.
-    var recycled = Math.min(Math.floor(weight * multiplier), max);
+    // Calculate recycled points (student recycled + volunteer) without doubling the multiplier.
+    var base = Math.floor(weight * multiplier);
+    // Repaired student gets double.
+    var double = Math.floor(weight * multiplier * 2);
 
-    // Display points
-    box.querySelector('[data-calc-out="repaired"]').textContent = repaired;
-    box.querySelector('[data-calc-out="recycled"]').textContent = recycled;
-    box.querySelector('[data-calc-out="volunteer"]').textContent = recycled;
     box.querySelector('[data-calc-rule]').textContent =
-        weight + ' kg × ' + multiplier + ' = ' + Math.floor(weight * multiplier) + ' (max ' + max + ')';
-    // Display a warning if the raw repaired calculation exceeds the maximum.
-    box.querySelector('[data-calc-note]').textContent =
-        (weight * multiplier * 2 > max) ? 'The repaired amount has reached the max of ' + max + ' points.' : '';
+        weight + ' kg × ' + multiplier + ' = ' + base + ' points (max ' + max + ' per device)';
+
+    // Display points on each card
+    showCalcCard(box, 'repaired', double, max, weight + ' × ' + multiplier + ' × 2 = ' + double);
+    showCalcCard(box, 'recycled', base, max, weight + ' × ' + multiplier + ' = ' + base);
+    showCalcCard(box, 'volunteer', base, max, weight + ' × ' + multiplier + ' = ' + base);
+}
+
+// Fill one result card: the points, the working, and a "Max reached" mark only on the card that hit the max
+function showCalcCard(box, name, points, max, working) {
+    var card = box.querySelector('[data-calc-card="' + name + '"]');
+    var capped = points > max;
+    card.querySelector('[data-calc-out]').textContent = capped ? max : points;
+    card.querySelector('[data-calc-work]').textContent = capped
+        ? working + ', but the max is ' + max + ', so this person gets ' + max + '.'
+        : working;
+    card.classList.toggle('is-capped', capped);
 }
 document.addEventListener('input', function (event) {
     var box = event.target.closest('[data-calculator]');
@@ -440,6 +523,7 @@ function openTab(name) {
         btn.setAttribute('aria-selected', on ? 'true' : 'false');
     });
     tabs.querySelectorAll('.tab-panel').forEach(function (panel) {
+        if (panel.hidden !== (panel.id !== name)) clearErrors(panel);   // start clean every time a tab is opened or closed
         panel.hidden = panel.id !== name;
     });
 }
@@ -516,3 +600,17 @@ if (reportForm) {
     // Apply the initial report period selection.
     updatePeriod();
 }
+
+/* === 12. Error messages from PHP in a pop-up === */
+// set_flash('error', ...) is printed as <div data-flash="error">. Show it with alert() too.
+// We wait for the page to finish loading (and 100 ms more), so the page is drawn behind the pop-up.
+// Success messages (green box) stay on the page only, so the user does not have to press OK every time.
+window.addEventListener('load', function () {
+    var errors = [];
+    document.querySelectorAll('[data-flash="error"]').forEach(function (box) {
+        errors.push(box.textContent.trim());
+    });
+    if (errors.length) {
+        setTimeout(function () { alert(errors.join('\n')); }, 100);
+    }
+});

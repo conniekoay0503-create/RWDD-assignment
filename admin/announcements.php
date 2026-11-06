@@ -31,13 +31,12 @@ $announcements = db_all($conn, $sql . " ORDER BY a.created_at DESC", $types, $pa
 $page_title = 'Announcements';
 $active = 'announcements';
 require '../includes/admin_top.php';
-page_head('megaphone', 'Announcements', 'News for everyone. They appear on every dashboard and on the homepage.',
-    '<a class="btn btn-primary" href="announcement_form.php">' . icon('plus') . ' Post announcement</a>');
+page_head('megaphone', 'Announcements', 'News for everyone. They appear on every dashboard and on the homepage.');
 ?>
 <form method="get" class="toolbar">
     <label class="search-box"><?= icon('search') ?><input type="search" name="q" placeholder="Search announcements" value="<?= e($q) ?>" aria-label="Search announcements"></label>
-    <label class="check"><input type="checkbox" name="mine" value="1" <?= $mine ? 'checked' : '' ?>> Posted by me</label>
     <button class="btn btn-outline btn-sm"><?= icon('filter') ?> Apply</button>
+    <label class="check"><input type="checkbox" name="mine" value="1" <?= $mine ? 'checked' : '' ?>> Posted by me</label>
 </form>
 
 <?php if (!$announcements) empty_state('megaphone', 'No announcements found.'); ?>

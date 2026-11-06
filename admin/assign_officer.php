@@ -2,6 +2,9 @@
 /*
  * Users - assign a Recycling Officer  (Figure 23, page 3 of 3)
  * Only an existing student can become an officer: delete the student row, insert the officer row.
+ * Two steps:
+ *   1. "Find student" (GET ?tp=TP095001) checks the TP number first and shows who it is.
+ *   2. "Assign as officer" (POST) asks to confirm, then changes the role.
  */
 require '../config/db.php';
 require '../includes/functions.php';
@@ -30,6 +33,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirect('assign_officer.php');
 }
 
+// ---------- Step 1: find the student before anything is changed ----------
+$found = null;
+$tp_typed = strtoupper(trim($_GET['tp'] ?? ''));
+if ($tp_typed !== '') {
+    $person = db_one($conn, "SELECT tp_number, name, email, is_active FROM users WHERE tp_number = ?", 's', [$tp_typed]);
+    if (!preg_match('/^TP[0-9]{6}$/', $tp_typed)) {
+        set_flash('error', 'Please enter a valid TP number, e.g. TP012345.');
+    } elseif (!$person) {
+        set_flash('error', 'No account has the TP number ' . $tp_typed . '. Please check the number and try again.');
+    } elseif (find_role($conn, $tp_typed) !== 'student') {
+        set_flash('error', $person['name'] . ' (' . $tp_typed . ') is already a ' . ucfirst(find_role($conn, $tp_typed)) . '. Only a Student can be assigned as an Officer.');
+    } elseif ((int) $person['is_active'] !== 1) {
+        set_flash('error', $person['name'] . ' (' . $tp_typed . ') is deactivated. Activate the account first.');
+    } else {
+        $found = $person;   // OK: show the student and the "Assign" button
+    }
+    if (!$found) redirect('assign_officer.php');   // show the error on a clean page
+}
+
 $officers = db_all($conn, "SELECT u.name, u.tp_number, u.email, o.assigned_at, a.name AS by_name
                            FROM officers o
                            JOIN users u ON u.tp_number = o.tp_number
@@ -44,14 +66,32 @@ page_head('user-plus', 'Assign a Recycling Officer', 'Officers handle recycling 
 <div class="two-col">
     <section class="card">
         <h2 class="card-title"><?= icon('id') ?> Student TP number</h2>
-        <form method="post" novalidate data-validate data-confirm="Assign this user as a Recycling Officer?">
-            <div class="field">
-                <label for="officer_tp">TP number</label>
-                <input type="text" id="officer_tp" name="tp_number" maxlength="8" placeholder="TP012345" pattern="[Tt][Pp][0-9]{6}" required
-                       data-error="Use TP followed by 6 digits">
+        <?php if (!$found): ?>
+            <!-- Step 1: GET form, nothing is changed yet -->
+            <form method="get" novalidate data-validate>
+                <div class="field">
+                    <label for="officer_tp">TP number</label>
+                    <input type="text" id="officer_tp" name="tp" maxlength="8" placeholder="TP012345" pattern="[Tt][Pp][0-9]{6}" required
+                           data-error="Use TP followed by 6 digits, e.g. TP012345">
+                </div>
+                <button class="btn btn-primary"><?= icon('search') ?> Find student</button>
+            </form>
+        <?php else: ?>
+            <!-- Step 2: the student exists, so now ask to confirm -->
+            <div class="found-person">
+                <span class="avatar"><?= e(strtoupper(substr($found['name'], 0, 1))) ?></span>
+                <div>
+                    <strong><?= e($found['name']) ?></strong>
+                    <small class="muted"><?= e($found['tp_number']) ?> · <?= e($found['email']) ?> · Student</small>
+                </div>
             </div>
-            <button class="btn btn-primary"><?= icon('user-plus') ?> Assign officer</button>
-        </form>
+            <form method="post" class="btn-row"
+                  data-confirm="Assign <?= e($found['name']) ?> (<?= e($found['tp_number']) ?>) as a Recycling Officer? Their student role will be replaced.">
+                <input type="hidden" name="tp_number" value="<?= e($found['tp_number']) ?>">
+                <button class="btn btn-primary"><?= icon('user-plus') ?> Assign as officer</button>
+                <a class="btn btn-outline" href="assign_officer.php"><?= icon('x') ?> Cancel</a>
+            </form>
+        <?php endif; ?>
     </section>
     <section class="card">
         <h2 class="card-title"><?= icon('recycle') ?> Current officers · <?= count($officers) ?></h2>

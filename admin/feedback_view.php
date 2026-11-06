@@ -69,7 +69,7 @@ page_head('message', 'Feedback from ' . $view['name'], 'About ' . $view['device_
             <?php endif; ?>
         </div>
         <?php if ($view['admin_reply'] === null): ?>
-            <form method="post" novalidate data-validate class="reply-form">
+            <form method="post" novalidate data-validate class="reply-form" data-confirm="Send this reply? It cannot be edited after it is sent.">
                 <input type="hidden" name="feedbackID" value="<?= e($view['feedbackID']) ?>">
                 <div class="field">
                     <label for="admin_reply"><?= icon('send') ?> Your reply <small class="muted" data-count-for="admin_reply"></small></label>

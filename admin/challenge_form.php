@@ -98,7 +98,8 @@ page_head($edit ? 'edit' : 'plus', $edit ? 'Edit challenge' : 'Create a challeng
     $edit ? 'You can change it until the start date.' : 'It is posted on the announcement board automatically.');
 ?>
 <section class="card narrow">
-    <form method="post" novalidate data-validate>
+    <form method="post" novalidate data-validate
+          data-confirm="<?= $edit ? 'Save the changes to this challenge?' : 'Create this challenge and post it on the announcement board?' ?>">
         <input type="hidden" name="challengeID" value="<?= e($edit['challengeID'] ?? '') ?>">
         <div class="field">
             <label for="title"><?= icon('flag') ?> Title</label>

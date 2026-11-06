@@ -73,7 +73,7 @@ page_head('user', 'My profile', 'Your details, password and display preferences.
 
     <section class="card tab-panel" id="details" role="tabpanel">
         <h2>Personal details</h2>
-        <form method="post" novalidate data-validate>
+        <form method="post" novalidate data-validate data-confirm="Save your new details?">
             <input type="hidden" name="action" value="details">
             <div class="field">
                 <label for="name">Full name</label>
@@ -100,7 +100,7 @@ page_head('user', 'My profile', 'Your details, password and display preferences.
 
     <section class="card tab-panel" id="password" role="tabpanel">
         <h2>Change password</h2>
-        <form method="post" novalidate data-validate>
+        <form method="post" novalidate data-validate data-confirm="Change your password? Use the new one the next time you log in.">
             <input type="hidden" name="action" value="password">
             <div class="field">
                 <label for="current_password">Current password</label>

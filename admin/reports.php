@@ -94,7 +94,7 @@ require '../includes/admin_top.php';
 page_head('chart', 'Reports', 'Choose a period, preview the report, then print it or save it as a PDF.');
 ?>
 
-<?php if ($error): ?><div class="alert alert-error no-print" role="alert"><?= e($error) ?></div><?php endif; ?>
+<?php if ($error): ?><div class="alert alert-error no-print" role="alert" data-flash="error"><?= e($error) ?></div><?php endif; ?>
 
 <section class="card no-print">
     <form method="get" action="reports.php#report" class="report-form" data-report-form>
@@ -132,9 +132,6 @@ page_head('chart', 'Reports', 'Choose a period, preview the report, then print i
         </div>
         <div class="btn-row">
             <button class="btn btn-primary" name="preview" value="1"><?= icon('eye') ?> Preview</button>
-            <?php if ($previewing): ?>
-                <button type="button" class="btn btn-sun" data-print><?= icon('printer') ?> Print / Save as PDF</button>
-            <?php endif; ?>
         </div>
     </form>
 </section>
@@ -142,6 +139,8 @@ page_head('chart', 'Reports', 'Choose a period, preview the report, then print i
 <?php if (!$previewing): ?>
     <?php empty_state('chart', 'Choose a period and press Preview to see the report here.'); ?>
 <?php else: ?>
+<!-- The white "paper" below is exactly what gets printed / saved as PDF -->
+<p class="print-area-label no-print"><?= icon('printer') ?> Print area: only the white part below is printed or saved as PDF.</p>
 <article class="report" id="report">
     <header class="report-head">
         <div>

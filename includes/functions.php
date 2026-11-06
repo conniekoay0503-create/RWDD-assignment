@@ -47,7 +47,8 @@ function show_flash()
     if (empty($_SESSION['flash'])) return;
     foreach ($_SESSION['flash'] as $f) {
         $ico = $f['type'] === 'success' ? icon('check') : icon('alert');
-        echo '<div class="alert alert-' . e($f['type']) . '" role="alert">' . $ico . '<span>' . e($f['msg']) . '</span></div>';
+        // data-flash lets main.js also show error messages with alert()
+        echo '<div class="alert alert-' . e($f['type']) . '" role="alert" data-flash="' . e($f['type']) . '">' . $ico . '<span>' . e($f['msg']) . '</span></div>';
     }
     unset($_SESSION['flash']);
 }

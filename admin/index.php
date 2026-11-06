@@ -12,7 +12,7 @@ $fb_new    = db_value($conn, "SELECT COUNT(*) FROM feedback WHERE admin_reply IS
 $fb_total  = db_value($conn, "SELECT COUNT(*) FROM feedback");
 $vr_new    = db_value($conn, "SELECT COUNT(*) FROM volunteer_request WHERE status = 'pending'");
 $overdue   = db_value($conn, "SELECT COUNT(*) FROM devices
-                              WHERE status IN ('Ready for Collection', 'Pending Consent', 'Return Requested', 'Returned Unrepaired')
+                              WHERE status IN ('Ready for Collection', 'Pending Consent', 'Return Requested', 'Returned Unrepaired', 'Returned Unclaimed')
                               AND DATEDIFF(NOW(), status_changed_at) > 7");
 $recycle   = db_value($conn, "SELECT COUNT(*) FROM devices WHERE status = 'Awaiting Recycle'");
 
@@ -27,9 +27,10 @@ $outcome   = db_one($conn, "SELECT COUNT(DISTINCT CASE WHEN new_status = 'Ready 
 $decided   = $outcome['fixed'] + $outcome['unfixable'];
 $success   = $decided > 0 ? round($outcome['fixed'] / $decided * 100) : 0;
 
-// ---- What devices are now (all 14 statuses, even when the count is 0) ----
+// ---- What devices are now (all 15 statuses, even when the count is 0) ----
 $statuses = ['Submitted', 'Dropped Off', 'Claimed', 'In Repair', 'Ready for Collection', 'Completed', 'Pending Consent',
-             'Return Requested', 'Awaiting Recycle', 'Recycled', 'Returned Unrepaired', 'Collected Unrepaired', 'Disposed', 'Cancelled'];
+             'Return Requested', 'Awaiting Recycle', 'Recycled', 'Returned Unrepaired', 'Collected Unrepaired', 'Disposed',
+             'Returned Unclaimed', 'Cancelled'];
 $counts = array_fill_keys($statuses, 0);
 foreach (db_all($conn, "SELECT status, COUNT(*) AS n FROM devices GROUP BY status") as $row) {
     $counts[$row['status']] = (int) $row['n'];
@@ -126,7 +127,7 @@ require '../includes/admin_top.php';
             <h2 class="card-title"><?= icon('history') ?> Recent activity</h2>
             <label class="search-box"><?= icon('search') ?><input type="search" placeholder="Search" data-filter-list="activity" aria-label="Search recent activity"></label>
         </div>
-        <ul class="activity" id="activity" data-show-limit="6">
+        <ul class="activity" id="activity" data-show-limit="7">
             <?php foreach ($recent as $r): ?>
                 <li>
                     <span class="activity-dot"><?= icon('arrow-right') ?></span>
@@ -139,6 +140,7 @@ require '../includes/admin_top.php';
             <?php endforeach; ?>
         </ul>
         <?php if (!$recent) empty_state('history', 'No activity yet.'); ?>
+        <p class="no-results" data-no-results-for="activity" hidden><?= icon('search') ?> No activity matches your search.</p>
         <div class="card-foot">
             <button type="button" class="btn btn-outline btn-sm" data-show-more="activity"><?= icon('plus') ?> Show more</button>
             <button type="button" class="btn btn-outline btn-sm" data-show-less="activity">Show less</button>

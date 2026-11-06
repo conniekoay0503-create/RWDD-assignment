@@ -97,3 +97,11 @@ Pending Consent ──(student 同意回收)──> Awaiting Recycle ──(offi
 - **Student 页**：按「我要拿回」时，status 改成 `'Return Requested'`（以前是直接改成 `'Returned Unrepaired'`）。
 - **Volunteer 页**：多一个按钮，把 `'Return Requested'` 改成 `'Returned Unrepaired'`，记得同时 INSERT 一行 device_status_history。
 - **7 天规则**：`Return Requested` 超过 7 天会算进 admin dashboard 的 overdue（表示 volunteer 太慢）。但 **officer 不能 dispose** 这个 status 的 device，因为学生已经说要拿回了。
+- **Returned Unclaimed**：`Dropped Off` 之后 7 天都没有 volunteer claim，`volunteer/repair_queue.php` 会把它改成 `'Returned Unclaimed'`，学生去 Green Hub 领回。它在 admin dashboard 用红色标签显示；超过 7 天还没领，也会算进 overdue。
+  （database 要先跑 `ALTER TABLE ... 'Returned Unclaimed'` 那段 SQL；zip 里的 `ewaste_repair_cafe.sql` 已经包含了。）
+
+## 8. 给组员：Pop-up 讯息和确认（main.js 自动处理，用浏览器的 alert() / confirm()）
+- **确认**：在 `<form>`（或按钮）加 `data-confirm="Delete this device?"`，按下时会先跳出 confirm() pop-up，按 OK 才送出，按 Cancel 不会送出。链接 `<a data-confirm="...">` 也可以。
+- **检查表单**：`<form novalidate data-validate>` 会检查 required / email / 数字 / pattern，错误会在格子下面显示，同时用 alert() 列出全部错误。
+- **PHP 讯息**：`set_flash('error', '...')` / `set_flash('success', '...')` 在下一页显示成红色 / 绿色框；错误的还会用 alert() 跳出来，成功的只显示绿色框。
+- **数字格子**：`<input type="number" step="1">` 只能打整数，打字母会马上提示；`step="0.01"` 可以打小数点。

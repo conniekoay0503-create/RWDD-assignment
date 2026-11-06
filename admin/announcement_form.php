@@ -44,7 +44,8 @@ require '../includes/admin_top.php';
 page_head($edit ? 'edit' : 'megaphone', $edit ? 'Edit announcement' : 'Post an announcement', 'Keep it short: what is happening, when, and what students should do.');
 ?>
 <section class="card narrow">
-    <form method="post" novalidate data-validate>
+    <form method="post" novalidate data-validate
+          data-confirm="<?= $edit ? 'Save the changes to this announcement?' : 'Post this announcement? Everyone will see it.' ?>">
         <input type="hidden" name="announcementID" value="<?= e($edit['announcementID'] ?? '') ?>">
         <div class="field">
             <label for="an_title"><?= icon('type') ?> Title</label>

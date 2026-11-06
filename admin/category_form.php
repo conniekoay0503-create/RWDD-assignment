@@ -55,7 +55,8 @@ require '../includes/admin_top.php';
 page_head($edit ? 'edit' : 'plus', $edit ? 'Edit ' . $edit['category_name'] : 'Add a category', 'Students choose a category when they submit a device.');
 ?>
 <section class="card narrow">
-    <form method="post" novalidate data-validate>
+    <form method="post" novalidate data-validate
+          data-confirm="<?= $edit ? 'Save the changes to ' . e($edit['category_name']) . '?' : 'Add this new category?' ?>">
         <input type="hidden" name="categoryID" value="<?= e($edit['categoryID'] ?? '') ?>">
         <div class="field">
             <label for="category_name"><?= icon('tag') ?> Category name</label>
@@ -65,10 +66,13 @@ page_head($edit ? 'edit' : 'plus', $edit ? 'Edit ' . $edit['category_name'] : 'A
             <div class="field">
                 <label for="multiplier"><?= icon('percent') ?> Multiplier (points per kg)</label>
                 <input type="number" id="multiplier" name="multiplier" min="0.01" step="0.01" required value="<?= e($form['multiplier'] ?? '') ?>">
+                <small class="field-hint">How many points <b>1 kg</b> of this type is worth.
+                    e.g. 500 → a 0.2 kg phone gets 0.2 × 500 = <b>100</b> points (repaired: × 2 = 200).</small>
             </div>
             <div class="field">
                 <label for="max_points"><?= icon('star') ?> Max points per device</label>
                 <input type="number" id="max_points" name="max_points" min="1" step="1" required value="<?= e($form['max_points'] ?? '') ?>">
+                <small class="field-hint">The most one device can earn, so a very heavy device cannot earn too many points.</small>
             </div>
         </div>
         <label class="switch-row">

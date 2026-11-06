@@ -48,6 +48,11 @@ page_head('gift', 'Rewards', 'What students can swap their points for.',
                         <input type="hidden" name="rewardID" value="<?= e($w['rewardID']) ?>">
                         <button class="btn btn-danger btn-sm"><?= icon('trash') ?> Delete</button>
                     </form>
+                <?php else: ?>
+                    <!-- Tell the admin why there is no Delete button -->
+                    <span class="lock-note" title="Students have already redeemed this reward. Deleting it would remove it from their cashback history. Set the stock to 0 to stop offering it.">
+                        <?= icon('lock') ?> Can't delete: already redeemed
+                    </span>
                 <?php endif; ?>
             </footer>
         </article>

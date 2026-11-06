@@ -336,7 +336,7 @@ input[type="range"] { width: 100%; accent-color: var(--primary); margin-top: 0.4
 .status-submitted, .status-dropped-off { background: var(--sky-bg); color: var(--sky-fg); }
 .status-claimed, .status-in-repair { background: var(--gold-bg); color: var(--gold-fg); }
 .status-ready-for-collection, .status-completed { background: var(--mint-bg); color: var(--mint-fg); }
-.status-pending-consent, .status-return-requested, .status-returned-unrepaired { background: var(--red-bg); color: var(--red-fg); }
+.status-pending-consent, .status-return-requested, .status-returned-unrepaired, .status-returned-unclaimed { background: var(--red-bg); color: var(--red-fg); }
 .status-awaiting-recycle, .status-recycled { background: #e3f3f1; color: #23736a; }
 [data-theme="dark"] .status-awaiting-recycle, [data-theme="dark"] .status-recycled { background: #183330; color: #74c7b7; }
 
@@ -934,4 +934,37 @@ body.auth { min-height: 100vh; background: var(--pub-gradient); }
     .stat-grid, .stat-grid.four { grid-template-columns: repeat(4, 1fr); }
     thead th { background: #eee; color: #000; }
     a { color: #000; text-decoration: none; }
+}
+
+/* 13. Small helpers added later */
+/* "No activity matches your search." under the dashboard list */
+.no-results { display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin: 0; padding: 2rem 0; color: var(--muted); }
+/* Grey help text under a form box, e.g. what "multiplier" means */
+.field-hint { display: block; margin-top: 0.35rem; color: var(--muted); font-size: 0.82rem; line-height: 1.45; }
+
+/* Points calculator: explanation box + the working under each result */
+.calc-explain { margin-top: 1.2rem; padding: 1rem 1.1rem; border-radius: 14px; background: var(--surface-2); }
+.calc-explain h2 { display: flex; align-items: center; gap: 0.4rem; font-size: 1rem; margin-bottom: 0.4rem; }
+.calc-explain h2 .icon { color: var(--primary); }
+.calc-explain ul { margin: 0; padding-left: 1.1rem; color: var(--muted); font-size: 0.9rem; }
+.calc-explain li + li { margin-top: 0.25rem; }
+.result-card small { margin-top: 0.2rem; font-size: 0.8rem; line-height: 1.4; color: var(--muted); }
+.max-tag {
+    display: none; align-self: flex-start; font-style: normal; font-size: 0.72rem; font-weight: 700;
+    padding: 0.1rem 0.5rem; border-radius: 999px; background: var(--red-bg); color: var(--red-fg);
+}
+.result-card.is-capped .max-tag { display: inline-block; }   /* only the card that hit the max shows the tag */
+
+/* Reports: the white "paper" is the part that gets printed */
+.print-area-label { display: flex; align-items: center; gap: 0.4rem; margin: 1.5rem 0 0.5rem; color: var(--muted); font-size: 0.88rem; }
+.report { background: var(--surface); border: 2px dashed var(--border); border-radius: 20px; padding: 0.25rem 1.5rem 0.5rem; }
+.report .card, .report .stat-card { box-shadow: none; }
+.report .report-head { margin-top: 1rem; }
+
+/* Assign officer: the student that was found */
+.found-person { display: flex; align-items: center; gap: 0.8rem; padding: 0.9rem 1rem; margin-bottom: 1rem; border-radius: 14px; background: var(--surface-2); }
+.found-person strong { display: block; }
+
+@media print {
+    .report { border: 0; padding: 0; }
 }

@@ -30,24 +30,39 @@ page_head('calculator', 'Points calculator', 'Try a weight to see how many point
             <input type="range" min="0.01" max="3" step="0.01" value="0.20" data-calc-slider aria-label="Weight slider">
         </div>
         <p class="calc-rule" data-calc-rule></p>
+        <div class="calc-explain">
+            <h2><?= icon('info') ?> How points are worked out</h2>
+            <ul>
+                <li><b>Multiplier</b> = points for 1 kg of this category.</li>
+                <li><b>Points</b> = weight (kg) × multiplier, rounded down.</li>
+                <li>A <b>repaired</b> device gives the student <b>double</b> (× 2), because repairing is better than recycling.</li>
+                <li>No one gets more than the category's <b>max per device</b>.</li>
+            </ul>
+        </div>
     </div>
     <div class="calc-results">
-        <div class="result-card tint-mint">
+        <!-- main.js fills data-calc-out (the points) and data-calc-work (how it was worked out) -->
+        <div class="result-card tint-mint" data-calc-card="repaired">
             <?= icon('wrench') ?>
             <span>Student · repaired <b>×2</b></span>
-            <strong data-calc-out="repaired">0</strong>
+            <strong data-calc-out>0</strong>
+            <em class="max-tag">Max reached</em>
+            <small data-calc-work></small>
         </div>
-        <div class="result-card tint-sky">
+        <div class="result-card tint-sky" data-calc-card="recycled">
             <?= icon('recycle') ?>
             <span>Student · recycled</span>
-            <strong data-calc-out="recycled">0</strong>
+            <strong data-calc-out>0</strong>
+            <em class="max-tag">Max reached</em>
+            <small data-calc-work></small>
         </div>
-        <div class="result-card tint-gold">
+        <div class="result-card tint-gold" data-calc-card="volunteer">
             <?= icon('heart') ?>
             <span>Volunteer · per repair</span>
-            <strong data-calc-out="volunteer">0</strong>
+            <strong data-calc-out>0</strong>
+            <em class="max-tag">Max reached</em>
+            <small data-calc-work></small>
         </div>
-        <p class="calc-note" data-calc-note></p>
     </div>
 </section>
 <?php require '../includes/admin_bottom.php'; ?>

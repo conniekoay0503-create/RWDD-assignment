@@ -20,6 +20,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($points === false || $points <= 0)   $errors[] = 'Points required must be a whole number above 0.';
     if ($cash === false || $cash <= 0)       $errors[] = 'Cash value must be above 0.';
     if ($stock === false || $stock < 0)      $errors[] = 'Stock must be 0 or more.';
+    // Only one reward of the same cash value can be on offer at a time.
+    // If another one still has stock, the admin must wait until it runs out (or add stock to that one instead).
+    if ($cash !== false && $cash > 0) {
+        $same = db_one($conn, "SELECT rewardID, reward_name, stock FROM rewards WHERE cash_value = ? AND stock > 0 AND rewardID <> ?",
+            'ds', [$cash, $id]);
+        if ($same) {
+            $errors[] = $same['reward_name'] . ' (' . $same['rewardID'] . ') is still on offer with ' . $same['stock'] . ' left. '
+                      . 'You can add another ' . rm($cash) . ' reward only after its stock runs out, or edit ' . $same['rewardID'] . ' to add more stock.';
+        }
+    }
 
     if ($errors) {
         foreach ($errors as $err) set_flash('error', $err);
@@ -52,7 +62,8 @@ require '../includes/admin_top.php';
 page_head($edit ? 'edit' : 'plus', $edit ? 'Edit reward' : 'Add a reward', 'Students see this in their rewards list.');
 ?>
 <section class="card narrow">
-    <form method="post" novalidate data-validate>
+    <form method="post" novalidate data-validate
+          data-confirm="<?= $edit ? 'Save the changes to ' . e($edit['reward_name']) . '?' : 'Add this new reward? Students will see it straight away.' ?>">
         <input type="hidden" name="rewardID" value="<?= e($edit['rewardID'] ?? '') ?>">
         <div class="field">
             <label for="reward_name"><?= icon('gift') ?> Reward name</label>
