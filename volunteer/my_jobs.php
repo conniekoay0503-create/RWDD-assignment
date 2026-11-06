@@ -3,14 +3,14 @@
  * My jobs (flowchart Figure 17 + wireframe "My jobs")
  *
  *   1. Only a logged-in volunteer may enter.
- *   2. If a button was pressed (POST): check CSRF, read the action, do it, redirect.
+ *   2. If a button was pressed (POST): read the action, do it, redirect. (require_role() already checked the CSRF token.)
  *   3. Show every device this volunteer must act on: Claimed, In Repair, Return Requested.
  *
- * The weight is recorded by the officer at the Green Hub (not typed here).
+ * The volunteer weighs the device when they collect it ("Confirm receipt"). The points are worked out from it.
  */
 require '../config/db.php';
 require '../includes/functions.php';
-require '../includes/volunteer_logic.php';
+require_once '../includes/volunteer_logic.php';
 require_role($conn, 'volunteer', '../');
 
 $me = $_SESSION['tp_number'];
@@ -21,19 +21,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action    = $_POST['action'] ?? '';
     $note      = trim((string) ($_POST['note'] ?? ''));
 
-    if (!vol_csrf_ok($_POST['csrf'] ?? null)) {
-        set_flash('error', 'Session expired. Please try again.');
-    } elseif (!vol_valid_device_id($device_id)) {
+    if (!vol_valid_device_id($device_id)) {
         set_flash('error', 'Invalid device.');
     } elseif (mb_strlen($note) > VOL_NOTE_MAX) {
         set_flash('error', 'The note is too long (maximum ' . VOL_NOTE_MAX . ' characters).');
     } else {
         try {
             if ($action === 'receive') {
-                // Claimed -> In Repair (flowchart: "Repair started")
-                [$ok, $r] = vol_change_status($conn, $device_id, $me, 'Claimed', 'In Repair', null,
-                    'Repair started', 'A volunteer received your {device} and started the repair.');
-                set_flash($ok ? 'success' : 'error', $ok ? 'Receipt confirmed for "' . $r . '". Repair started.' : $r);
+                // Claimed -> In Repair (flowchart: "Repair started"). The weight is needed for the points later.
+                $weight = trim((string) ($_POST['weight_kg'] ?? ''));
+                if (!preg_match('/^\d{1,2}(\.\d{1,2})?$/', $weight) || (float) $weight <= 0 || (float) $weight > 50) {
+                    set_flash('error', 'Weight must be a number between 0.01 and 50 kg (up to 2 decimals).');
+                } else {
+                    [$ok, $r] = vol_change_status($conn, $device_id, $me, 'Claimed', 'In Repair', null,
+                        'Repair started', 'A volunteer received your {device} and started the repair.', (float) $weight);
+                    set_flash($ok ? 'success' : 'error', $ok ? 'Receipt confirmed for "' . $r . '". Repair started.' : $r);
+                }
 
             } elseif ($action === 'note') {
                 if ($note === '') {
@@ -47,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // The points are worked out from the weight, so the officer must have recorded it first
                 $weight = db_value($conn, "SELECT weight_kg FROM devices WHERE deviceID = ? AND claimed_by = ?", 'ss', [$device_id, $me]);
                 if ($weight === null) {
-                    set_flash('error', 'The weight is not recorded yet. Ask the officer at the Green Hub to weigh the device first.');
+                    set_flash('error', 'The weight is not recorded yet. It is entered when you confirm receipt.');
                 } else {
                     [$ok, $r] = vol_change_status($conn, $device_id, $me, 'In Repair', 'Ready for Collection',
                         $note !== '' ? $note : 'Repair finished',
@@ -124,14 +127,16 @@ page_head('wrench', 'My jobs', "Devices you've claimed. Only you can update them
                 <?php if ($status === 'Claimed'): ?>
 
                     <p class="hint"><?= icon('alert') ?> Collect it from the Green Hub, then confirm that you received it.</p>
-                    <p class="muted">
-                        <?= $j['weight_kg'] !== null ? 'Weight recorded by the officer: <strong>' . e(vol_kg($j['weight_kg'])) . '</strong>'
-                                                     : 'Weight not recorded yet. The officer at the Green Hub records it, and it is used for the points.' ?>
-                    </p>
-                    <form method="post" action="my_jobs.php">
-                        <?= vol_csrf_field() ?>
+                    <form method="post" action="my_jobs.php" novalidate data-validate>
+                        <?= csrf_field() ?>
                         <input type="hidden" name="device_id" value="<?= $dom ?>">
                         <input type="hidden" name="action" value="receive">
+                        <div class="field">
+                            <label for="w-<?= $dom ?>">Weight (kg)</label>
+                            <input type="number" id="w-<?= $dom ?>" name="weight_kg" min="0.01" max="50" step="0.01" required
+                                   value="<?= e($j['weight_kg'] ?? '') ?>" placeholder="e.g. 0.25">
+                            <small class="field-hint">Weigh it at the Green Hub. The points are worked out from it.</small>
+                        </div>
                         <button type="submit" class="btn btn-primary btn-block"><?= icon('check') ?> Confirm receipt &amp; start repair</button>
                     </form>
 
@@ -151,7 +156,7 @@ page_head('wrench', 'My jobs', "Devices you've claimed. Only you can update them
                     </p>
 
                     <form method="post" action="my_jobs.php" class="v-note-form">
-                        <?= vol_csrf_field() ?>
+                        <?= csrf_field() ?>
                         <input type="hidden" name="device_id" value="<?= $dom ?>">
                         <div class="field">
                             <label for="note-<?= $dom ?>">New note</label>
@@ -172,7 +177,7 @@ page_head('wrench', 'My jobs', "Devices you've claimed. Only you can update them
 
                     <p class="hint"><?= icon('alert') ?> The owner asked for this device back without recycling. Put it at the Green Hub counter, then press the button.</p>
                     <form method="post" action="my_jobs.php">
-                        <?= vol_csrf_field() ?>
+                        <?= csrf_field() ?>
                         <input type="hidden" name="device_id" value="<?= $dom ?>">
                         <input type="hidden" name="action" value="counter">
                         <button type="submit" class="btn btn-primary btn-block"><?= icon('check') ?> It is ready at the counter</button>

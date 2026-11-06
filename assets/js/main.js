@@ -388,12 +388,14 @@ function updateCalculator() {
     var max = parseInt(option.getAttribute('data-max'), 10);
     var weight = parseFloat(box.querySelector('[data-calc-weight]').value) || 0;
 
-    // Apply the same calculation rule as the server.
+    // Apply the same calculation rule as the server: calc_points() in includes/functions.php.
     // Same rule as the server: MIN(weight x multiplier (x2 if repaired), max), rounded down
+    // Round to 2 decimals first: 0.29 * 100 is stored as 28.999999..., and floor() alone would give 28.
+    function roundDown(raw) { return Math.floor(Math.round(raw * 100) / 100); }
     // Calculate recycled points (student recycled + volunteer) without doubling the multiplier.
-    var base = Math.floor(weight * multiplier);
+    var base = roundDown(weight * multiplier);
     // Repaired student gets double.
-    var double = Math.floor(weight * multiplier * 2);
+    var double = roundDown(weight * multiplier * 2);
 
     box.querySelector('[data-calc-rule]').textContent =
         weight + ' kg × ' + multiplier + ' = ' + base + ' points (max ' + max + ' per device)';

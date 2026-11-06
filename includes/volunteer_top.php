@@ -28,7 +28,7 @@ $unread = db_value($conn, "SELECT COUNT(*) FROM notifications WHERE tp_number = 
 $latest = db_all($conn, "SELECT title, message, is_read, created_at FROM notifications
                          WHERE tp_number = ? ORDER BY is_read, created_at DESC, notificationID DESC LIMIT 6", 's', [$_SESSION['tp_number']]);
 $this_page = basename($_SERVER['PHP_SELF']);
-$initial   = strtoupper(substr($_SESSION['name'], 0, 1));
+$initial   = mb_strtoupper(mb_substr($_SESSION['name'], 0, 1));
 
 // Page title with an icon (same function name and look as the admin pages)
 function page_head($icon_name, $title, $desc = '', $actions = '')
@@ -87,7 +87,7 @@ function empty_state($icon_name, $text, $action = '')
                     <strong>Notifications</strong>
                     <?php if ($unread): ?>
                         <form method="post" action="notifications.php">
-                            <?= vol_csrf_field() ?>
+                            <?= csrf_field() ?>
                             <input type="hidden" name="action" value="read_all">
                             <input type="hidden" name="back" value="<?= e($this_page) ?>">
                             <button class="link-btn"><?= icon('check') ?> Mark all as read</button>

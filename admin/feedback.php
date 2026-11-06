@@ -32,7 +32,7 @@ page_head('message', 'Feedback inbox', 'What students say about their repair. Op
     <?php foreach ($feedback as $f): ?>
         <li>
             <a href="feedback_view.php?id=<?= e($f['feedbackID']) ?>" class="<?= $f['admin_reply'] === null ? 'is-new' : '' ?>">
-                <span class="avatar small"><?= e(strtoupper(substr($f['name'], 0, 1))) ?></span>
+                <span class="avatar small"><?= e(mb_strtoupper(mb_substr($f['name'], 0, 1))) ?></span>
                 <span class="inbox-text">
                     <strong><?= e($f['name']) ?> <small class="muted">· <?= e($f['device_name']) ?></small></strong>
                     <span class="clip"><?= e($f['message']) ?></span>

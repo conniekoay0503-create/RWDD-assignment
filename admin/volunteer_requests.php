@@ -61,7 +61,7 @@ page_head('heart', 'Volunteer requests', 'Students who want to repair devices. A
     <?php foreach ($pending as $r): ?>
         <article class="request-card">
             <header>
-                <span class="avatar small"><?= e(strtoupper(substr($r['name'], 0, 1))) ?></span>
+                <span class="avatar small"><?= e(mb_strtoupper(mb_substr($r['name'], 0, 1))) ?></span>
                 <div>
                     <strong><?= e($r['name']) ?></strong>
                     <small class="muted"><?= e($r['tp_number']) ?> · <?= e($r['email']) ?></small>
@@ -71,12 +71,14 @@ page_head('heart', 'Volunteer requests', 'Students who want to repair devices. A
             <small class="muted"><?= icon('calendar') ?> Asked on <?= nice_date($r['requested_at']) ?></small>
             <footer>
                 <form method="post" data-confirm="Approve <?= e($r['name']) ?> as a Repair Volunteer?">
+                    <?= csrf_field() ?>
                     <input type="hidden" name="action" value="review_request">
                     <input type="hidden" name="requestID" value="<?= e($r['requestID']) ?>">
                     <input type="hidden" name="decision" value="approved">
                     <button class="btn btn-primary btn-sm"><?= icon('check') ?> Approve</button>
                 </form>
                 <form method="post" data-confirm="Reject this request?">
+                    <?= csrf_field() ?>
                     <input type="hidden" name="action" value="review_request">
                     <input type="hidden" name="requestID" value="<?= e($r['requestID']) ?>">
                     <input type="hidden" name="decision" value="rejected">

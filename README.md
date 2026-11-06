@@ -90,7 +90,13 @@ require '../includes/functions.php';
 require_role($conn, 'student', '../');   // 'admin' / 'student' / 'officer' / 'volunteer'
 ```
 
-`require_role()` checks that the user is logged in, that the account is still active, and that the role is correct. Otherwise it sends the user back to the login page.
+`require_role()` does six things on every page, in this order:
+1. Is the user logged in? If not, go to the login page.
+2. Is the account still active? If an admin deactivated it, log the user out.
+3. Read the role again from the database (`find_role()`), so a student who was just approved as a volunteer moves to the volunteer pages straight away.
+4. Wrong role? Go to that user's own dashboard.
+5. `check_csrf()`: every POST form must carry the CSRF token (section 6).
+6. `check_collection_deadlines()`: the 7-day checks (section 4).
 
 ## 4. Device status flow (15 statuses)
 
@@ -104,19 +110,31 @@ Submitted ──> Dropped Off ──> Claimed ──> In Repair
                                                     ├─> Awaiting Recycle ──> Recycled         (student allows recycling)
                                                     └─> Return Requested ──> Returned Unrepaired ──> Collected Unrepaired
                                                                                                     (student wants it back)
-If a device is not collected in time, the officer can set it to Disposed.
+Not collected within 7 days (Ready for Collection / Returned Unrepaired / Returned Unclaimed)
+  ──(officer, Abandoned Devices page)──> Disposed
 ```
 
 Who changes what:
-- **Student**: Submitted, Dropped Off, Cancelled, Awaiting Recycle / Return Requested (the choice after Pending Consent), Completed, Collected Unrepaired.
-- **Volunteer**: Claimed, In Repair, Ready for Collection, Pending Consent, Returned Unrepaired (after taking the device back to the Green Hub counter).
-- **Officer**: Recycled, Disposed.
+| New status | Who | Page |
+|---|---|---|
+| Submitted | Student | `student/submit-device.php` |
+| Dropped Off / Cancelled | Student | `student/device-details.php` ("Mark as dropped off" / "Cancel") |
+| Claimed | Volunteer | `volunteer/repair_queue.php` |
+| In Repair | Volunteer | `volunteer/my_jobs.php` ("Confirm receipt": the volunteer **weighs the device** here) |
+| Ready for Collection / Pending Consent | Volunteer | `volunteer/my_jobs.php` ("Mark as fixed" gives the points / "Can't be fixed") |
+| Awaiting Recycle / Return Requested | Student | `student/device-details.php` (the choice after Pending Consent) |
+| Returned Unrepaired | Volunteer | `volunteer/my_jobs.php` ("It is ready at the counter") |
+| Returned Unclaimed | System | `vol_return_expired()`: dropped off but not claimed within 7 days |
+| Completed / Collected Unrepaired | Student | `student/device-details.php` ("Confirm Collection") |
+| Recycled | Officer | `officer/confirm_recycling.php` (gives the points) |
+| Disposed | Officer | `officer/abandoned_devices.php` |
 
-Every status change must also INSERT one row into `device_status_history`, so the student can see the timeline.
+Every status change also INSERTs one row into `device_status_history` (the timeline), and **whoever changes the status calls `notify()` at that moment** to tell the owner.
 
-**7-day rules.** XAMPP has no scheduler, so these are worked out with `DATEDIFF()` / `INTERVAL 7 DAY` each time a page opens:
-- Waiting to be collected (Ready for Collection, Returned Unrepaired, Returned Unclaimed) for more than 7 days: the device counts as **overdue** on the admin dashboard, and `check_collection_deadlines()` notifies the owner, the admins and the officers.
-- Pending Consent and Return Requested for more than 7 days also count as overdue on the admin dashboard. An officer must **not** dispose a Return Requested device, because the student has asked for it back.
+**7-day rules.** XAMPP has no scheduler, so `require_role()` checks them every time a page opens. The rule is written **once**, in `functions.php` (`DEADLINE_DAYS`, `WAITING_FOR_OWNER`, `WAITING_FOR_ACTION`, `overdue_sql()`), and every page uses it:
+- **WAITING_FOR_OWNER** (Ready for Collection, Returned Unrepaired, Returned Unclaimed) for more than 7 days: overdue. `check_collection_deadlines()` notifies the owner, the admins and the officers (once), and the device appears on the officer's Abandoned Devices page, where it can be disposed of.
+- **WAITING_FOR_ACTION** (Pending Consent, Return Requested) for more than 7 days: also overdue on the admin dashboard. These are never on the Abandoned Devices page, so a Return Requested device can **never** be disposed of: the student has asked for it back.
+- Dropped off but not claimed within 7 days: becomes Returned Unclaimed (`vol_return_expired()`).
 
 ## 5. Points and cashback
 
@@ -127,6 +145,15 @@ points = MIN( FLOOR(weight_kg × multiplier), max_points )
 repaired device: the student gets × 2 (still capped at max_points)
 the volunteer who repaired it gets the normal amount
 ```
+
+One function does this for the whole website: `calc_points($kg, $multiplier, $max, $repaired)` in `functions.php` (`main.js` copies the same rule for the admin calculator). It rounds to 2 decimals before rounding down, because a computer stores 0.29 × 100 as 28.999…, and `floor()` alone would give 28 instead of 29.
+
+When the points are given:
+- **Repaired**: when the volunteer presses "Mark as fixed" (`vol_change_status()`), in the same transaction: the owner × 2 and the volunteer × 1.
+- **Recycled**: when the officer confirms recycling: the owner × 1.
+- The UNIQUE key `(deviceID, tp_number)` in `points_transactions` stops anyone being paid twice for one device.
+
+**Challenges:** a device counts when it is repaired and collected, or recycled, during the challenge (`CHALLENGE_STATUSES`, `challenge_kg()` in `functions.php`; the student page uses the same rule). After a challenge ends, the admin presses **Award bonus** on the Challenges page. Every student who reached the target gets the bonus once (the UNIQUE key `(challengeID, tp_number)` stops a second one).
 
 Example: Phone / Tablet, multiplier 500, max 300. A 0.2 kg phone is worth 0.2 × 500 = 100 points, or 200 if it is repaired.
 
@@ -176,9 +203,31 @@ In `bind_param` the type of an ID is `'s'` (string), not `'i'`.
 | `notify_admins($conn, $title, $message)` | Send a notification to every active admin |
 | `set_flash($type, $msg)` + `redirect($url)` | Show a message on the next page (Post → Redirect → Get) |
 | `require_role($conn, $role, $base)` | Page guard (see section 3) |
+| `csrf_field()` / `check_csrf()` | CSRF token for forms (see below) |
+| `calc_points(...)`, `overdue_sql(...)`, `challenge_kg(...)` | The shared rules (sections 4 and 5) |
 | `rm($amount)`, `nice_date($date)` | Format money (`RM 5.00`) and dates |
 
 When a student does something an admin must handle (redeems cashback, sends feedback, asks to be a volunteer), call `notify_admins()` after the INSERT. The admin's bell then shows a red number.
+
+### CSRF: put `<?= csrf_field() ?>` in every POST form
+CSRF = a bad website makes a logged-in user's browser send a form to our site (the browser adds our cookie by itself). So every `<form method="post">` must carry a secret token:
+```php
+<form method="post">
+    <?= csrf_field() ?>
+    ...
+</form>
+```
+You do **not** need to check it yourself: `require_role()` calls `check_csrf()`, and a form without the right token is refused with "Your session has expired". `login.php` and `register.php` call `check_csrf()` themselves. The token is the same for the whole session, so two open tabs both work.
+
+### Error pages
+Never use `exit('Device not found.')`: the user sees a blank page with no menu. Use a message and go back:
+```php
+set_flash('error', 'Device not found.');
+redirect('my-devices.php');
+```
+
+### Text length
+Use `mb_strlen()` / `mb_substr()` for anything a user types. `strlen()` / `substr()` count bytes, so they can cut a Chinese character or an emoji in half.
 
 ### Pop-up messages and confirmations (handled by `main.js`)
 - **Confirm before saving or deleting:** add `data-confirm="Delete this device?"` to a `<form>`, a submit button or a link. The browser's `confirm()` pop-up appears, and the form is only sent if the user presses OK.
@@ -191,6 +240,8 @@ When a student does something an admin must handle (redeems cashback, sends feed
 - **Prepared statements**: every SQL statement uses `?` and `bind_param`, so user input can never become part of the SQL command. This prevents SQL injection.
 - **password_hash / password_verify**: the database only stores a hash, never the real password.
 - **htmlspecialchars (`e()`)**: user input is escaped before it is printed. This prevents XSS.
+- **CSRF token**: every POST form carries a secret token (`csrf_field()`), checked in one place (`require_role()` → `check_csrf()`). A bad website cannot read the token, so it cannot send a form as our user.
+- **Single source of truth**: each rule is written once in `functions.php` (points `calc_points()`, overdue `overdue_sql()`, challenges `challenge_kg()`, IDs `next_id()`) and every role calls it. Changing a rule means changing one place, and two pages can never give different answers.
 - **Session + require_role()**: every page checks login, active account and role on its first lines.
 - **Transactions**: when one action changes several tables (for example, approving a volunteer: update the request, remove the student row, add the volunteer row, send a notification), it runs inside `begin_transaction()`. If any step fails, `rollback()` undoes all of them, so nothing is half done.
 - **"Affected rows = 1" check**: `UPDATE ... WHERE status = 'pending'` changes 1 row only while the request is still pending. If two admins press Approve at the same time, the second one changes 0 rows and sees "already reviewed".
@@ -208,4 +259,4 @@ When a student does something an admin must handle (redeems cashback, sends feed
 ## 9. Known limitations
 
 - `next_id()` uses MAX + 1. If two people insert into the same table at exactly the same moment, they could get the same ID and the second INSERT fails. This is acceptable for the assignment.
-- Challenge bonus points are not given automatically. The student page shows progress only.
+- The demo photos in `uploads/devices/` (`demo_1.jpg` … `demo_16.jpg`) are simple drawings. Replace them with your own photos (same file names), because the brief asks for graphics created by the team.

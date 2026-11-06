@@ -1,64 +1,22 @@
-
 <?php
 require '../config/db.php';
 require '../includes/functions.php';
 require_role($conn, 'student', '../');
 
-require '../includes/collection_deadlines.php';
-check_collection_deadlines($conn);
+// (overdue reminders are sent by require_role() -> check_collection_deadlines())
 
 $tp = $_SESSION['tp_number'];
 $error = '';
 
-// check device history for missing notifications
-$messages = [
-    'Submitted' => 'Your device was submitted successfully.',
-    'Claimed' => 'A volunteer has claimed your device.',
-    'In Repair' => 'Your device is now being repaired.',
-    'Ready for Collection' => 'Your repaired device is ready at Green Hub.',
-    'Pending Consent' => 'Your device cannot be repaired. Please choose return or recycling.',
-    'Return Requested' => 'Your return request has been received.',
-    'Awaiting Recycle' => 'Your device is waiting for recycling.',
-    'Returned Unrepaired' => 'Your device is ready for collection at Green Hub.',
-    'Returned Unclaimed' => 'Your device was returned to Green Hub.',
-    'Completed' => 'You have collected your repaired device.',
-    'Collected Unrepaired' => 'Your collection has been confirmed.',
-    'Recycled' => 'Your device has been recycled.',
-    'Disposed' => 'Your device has been disposed of.',
-    'Cancelled' => 'Your device submission was cancelled.'
-];
-
-$updates = db_all($conn, "SELECT h.deviceID, h.new_status, d.device_name
-    FROM device_status_history h JOIN devices d ON h.deviceID = d.deviceID
-    WHERE d.submitted_by = ? ORDER BY h.changed_at, h.historyID", 's', [$tp]);
-
-foreach ($updates as $u) {
-    if (!isset($messages[$u['new_status']])) continue;
-
-    $title = 'Device Update: ' . $u['deviceID'];
-    $message = $u['device_name'] . ': ' . $messages[$u['new_status']];
-
-    $exists = db_value($conn, "SELECT COUNT(*) FROM notifications
-        WHERE tp_number = ? AND title = ? AND message = ?",
-        'sss', [$tp, $title, $message]);
-
-    if (!$exists) notify($conn, $tp, $title, $message);
-}
-
-// create token for notification buttons
-if (empty($_SESSION['notifications_csrf']))
-    $_SESSION['notifications_csrf'] = bin2hex(random_bytes(32));
-
-$csrf = $_SESSION['notifications_csrf'];
+// Every page that changes a device's status sends its own notification at that moment
+// (the rule: whoever changes the status calls notify()), so nothing needs to be "filled in" here.
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
-    $token = $_POST['csrf_token'] ?? '';
     $id = trim((string)($_POST['notificationID'] ?? ''));
 
-    if (!is_string($token) || !hash_equals($csrf, $token)) {
-        $error = 'Invalid request. Please refresh.';
-    } elseif ($action === 'read_all') {
+    // (the CSRF token was already checked by require_role())
+    if ($action === 'read_all') {
         db_exec($conn, "UPDATE notifications SET is_read = 1
             WHERE tp_number = ?", 's', [$tp]);
 
@@ -114,7 +72,7 @@ require '../includes/student_top.php';
 
     <?php if ($unread > 0): ?>
         <form method="post">
-            <input type="hidden" name="csrf_token" value="<?= e($csrf) ?>">
+            <?= csrf_field() ?>
             <input type="hidden" name="action" value="read_all">
             <button class="btn btn-outline btn-sm">Mark All as Read</button>
         </form>
@@ -133,7 +91,7 @@ require '../includes/student_top.php';
                 </div>
                 <?php if (!$n['is_read']): ?>
                     <form method="post">
-                        <input type="hidden" name="csrf_token" value="<?= e($csrf) ?>">
+                        <?= csrf_field() ?>
                         <input type="hidden" name="action" value="read_one">
                         <input type="hidden" name="notificationID" value="<?= e($n['notificationID']) ?>">
                         <button class="btn btn-outline btn-sm">Mark as Read</button>

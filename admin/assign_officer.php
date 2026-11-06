@@ -79,7 +79,7 @@ page_head('user-plus', 'Assign a Recycling Officer', 'Officers handle recycling 
         <?php else: ?>
             <!-- Step 2: the student exists, so now ask to confirm -->
             <div class="found-person">
-                <span class="avatar"><?= e(strtoupper(substr($found['name'], 0, 1))) ?></span>
+                <span class="avatar"><?= e(mb_strtoupper(mb_substr($found['name'], 0, 1))) ?></span>
                 <div>
                     <strong><?= e($found['name']) ?></strong>
                     <small class="muted"><?= e($found['tp_number']) ?> · <?= e($found['email']) ?> · Student</small>
@@ -87,6 +87,7 @@ page_head('user-plus', 'Assign a Recycling Officer', 'Officers handle recycling 
             </div>
             <form method="post" class="btn-row"
                   data-confirm="Assign <?= e($found['name']) ?> (<?= e($found['tp_number']) ?>) as a Recycling Officer? Their student role will be replaced.">
+                <?= csrf_field() ?>
                 <input type="hidden" name="tp_number" value="<?= e($found['tp_number']) ?>">
                 <button class="btn btn-primary"><?= icon('user-plus') ?> Assign as officer</button>
                 <a class="btn btn-outline" href="assign_officer.php"><?= icon('x') ?> Cancel</a>
@@ -98,7 +99,7 @@ page_head('user-plus', 'Assign a Recycling Officer', 'Officers handle recycling 
         <ul class="simple-list">
             <?php foreach ($officers as $o): ?>
                 <li>
-                    <span class="avatar small"><?= e(strtoupper(substr($o['name'], 0, 1))) ?></span>
+                    <span class="avatar small"><?= e(mb_strtoupper(mb_substr($o['name'], 0, 1))) ?></span>
                     <div>
                         <strong><?= e($o['name']) ?></strong>
                         <small class="muted"><?= e($o['tp_number']) ?> · since <?= nice_date($o['assigned_at']) ?> · by <?= e($o['by_name'] ?? '-') ?></small>

@@ -5,15 +5,13 @@
  */
 require '../config/db.php';
 require '../includes/functions.php';
-require '../includes/volunteer_logic.php';
+require_once '../includes/volunteer_logic.php';
 require_role($conn, 'volunteer', '../');
 $me = $_SESSION['tp_number'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $reward_id = $_POST['reward_id'] ?? '';
-    if (!vol_csrf_ok($_POST['csrf'] ?? null)) {
-        set_flash('error', 'Session expired. Please try again.');
-    } elseif (!is_string($reward_id) || !preg_match('/^RW\d{3,7}$/', $reward_id)) {
+    if (!is_string($reward_id) || !preg_match('/^RW\d{3,7}$/', $reward_id)) {
         set_flash('error', 'Invalid reward.');
     } else {
         try {
@@ -64,7 +62,7 @@ page_head('wallet', 'Points & cashback', 'Turn your points into cash. Bigger tie
                 <?php else: ?>
                     <form method="post" action="points.php" style="width: 100%"
                           data-confirm="Redeem <?= e($rw['reward_name']) ?> for <?= (int) $rw['points_required'] ?> points?">
-                        <?= vol_csrf_field() ?>
+                        <?= csrf_field() ?>
                         <input type="hidden" name="reward_id" value="<?= e($rw['rewardID']) ?>">
                         <button type="submit" class="btn btn-primary btn-block">Redeem</button>
                     </form>

@@ -26,26 +26,7 @@ const VOL_NOTE_MAX = 255;   // device_status_history.remarks is VARCHAR(255)
  * 1. Small helpers
  * ===================================================================== */
 
-/* CSRF: every form carries a secret token that only our own page knows,
- * so a fake form on another website cannot make the volunteer press a button. */
-function vol_csrf_token()
-{
-    if (empty($_SESSION['csrf'])) {
-        $_SESSION['csrf'] = bin2hex(random_bytes(32));
-    }
-    return $_SESSION['csrf'];
-}
-
-function vol_csrf_ok($token)
-{
-    return !empty($_SESSION['csrf']) && is_string($token) && hash_equals($_SESSION['csrf'], $token);
-}
-
-/* A hidden input to paste inside every <form method="post"> */
-function vol_csrf_field()
-{
-    return '<input type="hidden" name="csrf" value="' . e(vol_csrf_token()) . '">';
-}
+/* CSRF: the shared csrf_field() / check_csrf() in functions.php protect every form (checked by require_role()). */
 
 /* Device IDs look like 'D009'. Anything else typed into a form is rejected. */
 function vol_valid_device_id($id)
@@ -255,16 +236,22 @@ function vol_job_notes($conn, $device_id)
  * if the device is still mine AND still in the status we expect ($from).
  * Returns [true, device name] or [false, message].
  */
-function vol_change_status($conn, $device_id, $me, $from, $to, $remark, $notif_title, $notif_text)
+function vol_change_status($conn, $device_id, $me, $from, $to, $remark, $notif_title, $notif_text, $weight = null)
 {
-    return vol_transaction($conn, function () use ($conn, $device_id, $me, $from, $to, $remark, $notif_title, $notif_text) {
+    return vol_transaction($conn, function () use ($conn, $device_id, $me, $from, $to, $remark, $notif_title, $notif_text, $weight) {
         $changed = db_exec($conn,
             "UPDATE devices SET status = ?, status_changed_at = NOW()
               WHERE deviceID = ? AND claimed_by = ? AND status = ?", 'ssss', [$to, $device_id, $me, $from]);
         if ($changed !== 1) {
             return [false, 'This job is not available any more. Please refresh the page.'];
         }
-        $dev = db_one($conn, "SELECT submitted_by, device_name, weight_kg FROM devices WHERE deviceID = ?", 's', [$device_id]);
+        // Confirm receipt: the volunteer weighs the device at the Green Hub (the points are worked out from it)
+        if ($weight !== null) {
+            db_exec($conn, "UPDATE devices SET weight_kg = ? WHERE deviceID = ?", 'ds', [$weight, $device_id]);
+        }
+        $dev = db_one($conn,
+            "SELECT d.submitted_by, d.device_name, d.weight_kg, c.multiplier, c.max_points
+               FROM devices d JOIN categories c ON c.categoryID = d.categoryID WHERE d.deviceID = ?", 's', [$device_id]);
 
         if ($to === 'In Repair' && $remark === null) {          // Confirm receipt writes the first note
             $remark = 'Received at the Green Hub.';
@@ -273,9 +260,28 @@ function vol_change_status($conn, $device_id, $me, $from, $to, $remark, $notif_t
             }
         }
         vol_log_status($conn, $device_id, $me, $to, $remark);
-        notify($conn, $dev['submitted_by'], $notif_title, str_replace('{device}', $dev['device_name'], $notif_text));
+
+        // Repaired: the owner earns x2 and the volunteer earns x1, in the SAME transaction as the status change.
+        // The UNIQUE key (deviceID, tp_number) in points_transactions stops anyone being paid twice for one device.
+        $text = str_replace('{device}', $dev['device_name'], $notif_text);
+        if ($to === 'Ready for Collection') {
+            $owner_points = calc_points($dev['weight_kg'], $dev['multiplier'], $dev['max_points'], true);
+            $my_points    = calc_points($dev['weight_kg'], $dev['multiplier'], $dev['max_points'], false);
+            vol_add_points($conn, $dev['submitted_by'], $device_id, $owner_points, $dev['device_name'] . ' repaired');
+            vol_add_points($conn, $me, $device_id, $my_points, 'Repaired ' . $dev['device_name']);
+            $text .= ' You earned ' . $owner_points . ' points.';
+        }
+        notify($conn, $dev['submitted_by'], $notif_title, $text);
         return [true, $dev['device_name']];
     });
+}
+
+/* One 'earn' row in the points ledger */
+function vol_add_points($conn, $tp, $device_id, $points, $description)
+{
+    db_exec($conn,
+        "INSERT INTO points_transactions (transactionID, tp_number, deviceID, points, txn_type, description) VALUES (?, ?, ?, ?, 'earn', ?)",
+        'sssis', [next_id($conn, 'points_transactions', 'transactionID', 'T'), $tp, $device_id, $points, $description]);
 }
 
 /* Add a repair note (only while the device is In Repair and mine) */

@@ -1,4 +1,3 @@
-
 <?php
 require '../config/db.php';
 require '../includes/functions.php';
@@ -15,8 +14,9 @@ $challenges = db_all($conn, "SELECT *,
     ORDER BY (CURDATE() > end_date), (CURDATE() < start_date), start_date DESC");
 
 // calculate how much weight user's contributed to each challenge
+// (CHALLENGE_STATUSES is the shared rule in functions.php - the admin gives the bonus with the same rule)
 $progress = db_all($conn, "SELECT c.challengeID,
-    COALESCE(SUM(CASE WHEN d.status IN ('Completed','Recycled','Disposed')
+    COALESCE(SUM(CASE WHEN d.status IN (" . sql_list(CHALLENGE_STATUSES) . ")
     AND d.status_changed_at >= c.start_date
     AND d.status_changed_at < DATE_ADD(c.end_date, INTERVAL 1 DAY)
     THEN d.weight_kg ELSE 0 END),0) AS kg
@@ -27,7 +27,7 @@ $kg = array_column($progress, 'kg', 'challengeID');
 
 // rank students based on total device weight
 $leaders = db_all($conn, "SELECT u.tp_number, u.name,
-    COALESCE(SUM(CASE WHEN d.status IN ('Completed','Recycled','Disposed')
+    COALESCE(SUM(CASE WHEN d.status IN (" . sql_list(CHALLENGE_STATUSES) . ")
     THEN d.weight_kg ELSE 0 END),0) AS kg
     FROM students s JOIN users u ON s.tp_number = u.tp_number
     LEFT JOIN devices d ON d.submitted_by = s.tp_number

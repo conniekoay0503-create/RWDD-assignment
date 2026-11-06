@@ -1,4 +1,3 @@
-
 <?php
 // Student header based on the Admin layout.
 
@@ -21,10 +20,6 @@ $nav_active = $student_page === 'device-details.php'
 
 $studentTP = $_SESSION['tp_number'];
 
-if (empty($_SESSION['notifications_csrf'])) {
-    $_SESSION['notifications_csrf'] = bin2hex(random_bytes(32));
-}
-
 $student_unread = (int) db_value(
     $conn,
     "SELECT COUNT(*) FROM notifications
@@ -45,7 +40,7 @@ $student_latest = db_all(
     [$studentTP]
 );
 
-$initial = strtoupper(substr($_SESSION['name'] ?? 'S', 0, 1));
+$initial = mb_strtoupper(mb_substr($_SESSION['name'] ?? 'S', 0, 1));
 ?>
 
 <!DOCTYPE html>
@@ -162,13 +157,7 @@ $initial = strtoupper(substr($_SESSION['name'] ?? 'S', 0, 1));
                                 value="read_all"
                             >
 
-                            <input
-                                type="hidden"
-                                name="csrf_token"
-                                value="<?= e(
-                                    $_SESSION['notifications_csrf']
-                                ) ?>"
-                            >
+                            <?= csrf_field() ?>
 
                             <button
                                 type="submit"

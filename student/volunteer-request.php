@@ -1,4 +1,3 @@
-
 <?php
 require '../config/db.php';
 require '../includes/functions.php';
@@ -7,16 +6,10 @@ require_role($conn, 'student', '../');
 $tp = $_SESSION['tp_number'];
 $error = '';
 
-if (empty($_SESSION['volunteer_csrf']))
-    $_SESSION['volunteer_csrf'] = bin2hex(random_bytes(32));
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $reason = trim((string)($_POST['reason'] ?? ''));
-    $token = $_POST['csrf_token'] ?? '';
-
-    if (!is_string($token) || !hash_equals($_SESSION['volunteer_csrf'], $token))
-        $error = 'Invalid request.';
-    elseif ($reason === '' || mb_strlen($reason) > 255)
+    // (the CSRF token was already checked by require_role())
+    if ($reason === '' || mb_strlen($reason) > 255)
         $error = 'Reason must be 1 to 255 characters.';
     else {
         try {
@@ -45,7 +38,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ($user['name'] ?? $tp) . ' submitted a Repair Volunteer application.');
 
             $conn->commit();
-            $_SESSION['volunteer_csrf'] = bin2hex(random_bytes(32));
             set_flash('success', 'Volunteer application submitted.');
             redirect('volunteer-request.php');
 
@@ -87,7 +79,7 @@ require '../includes/student_top.php';
         <p>You already have a pending application.</p>
     <?php else: ?>
         <form method="post">
-            <input type="hidden" name="csrf_token" value="<?= e($_SESSION['volunteer_csrf']) ?>">
+            <?= csrf_field() ?>
             <label for="reason">Why do you want to volunteer?</label>
             <textarea id="reason" name="reason" maxlength="255" required><?= e($_POST['reason'] ?? '') ?></textarea>
             <button class="btn btn-primary">Submit Application</button>

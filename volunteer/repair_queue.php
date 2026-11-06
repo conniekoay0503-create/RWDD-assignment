@@ -2,19 +2,17 @@
 
 require '../config/db.php'; // to connect database , get $conn
 require '../includes/functions.php'; 
-require '../includes/volunteer_logic.php'; 
+require_once '../includes/volunteer_logic.php'; 
 require_role($conn, 'volunteer', '../');   // not volunteer kick 
 
-$me = $_SESSION['tp_number'];//record who am i during log in 
-
-vol_return_expired($conn);                 
+$me = $_SESSION['tp_number'];//record who am i during log in
+// (devices not claimed in 7 days are returned by require_role() -> check_collection_deadlines())
 
 // the volunteer pressed Claim 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $device_id = $_POST['device_id'] ?? '';
-    if (!vol_csrf_ok($_POST['csrf'] ?? null)) { // csrf means random password in button list 
-        set_flash('error', 'Session expired. Please try again.');
-    } elseif (!vol_valid_device_id($device_id)) {        // if form or style not correct will display invalid device 
+    // (the CSRF token - a random password inside every form - is already checked by require_role())
+    if (!vol_valid_device_id($device_id)) {        // if form or style not correct will display invalid device 
         set_flash('error', 'Invalid device.');
     } else {
         try {
@@ -64,7 +62,7 @@ page_head('inbox', 'Repair queue',
                 <footer>
                     <small class="muted"><?= icon('calendar') ?> Dropped off <?= e(date('j M', strtotime($d['status_changed_at']))) ?></small>
                     <form method="post" action="repair_queue.php" data-confirm="Claim this device? You must collect it from the Green Hub." style="margin-left: auto">
-                        <?= vol_csrf_field() ?>
+                        <?= csrf_field() ?>
                         <input type="hidden" name="device_id" value="<?= e($d['deviceID']) ?>">
                         <button type="submit" class="btn btn-primary btn-sm">Claim</button>
                     </form>

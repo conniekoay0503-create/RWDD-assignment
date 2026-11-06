@@ -1,4 +1,3 @@
-
 <?php
 require '../config/db.php';
 require '../includes/functions.php';
@@ -10,23 +9,18 @@ $errors = [];
 $categories = db_all($conn, "SELECT categoryID, category_name FROM categories
     WHERE is_active = 1 ORDER BY categoryID");
 
-if (empty($_SESSION['submit_csrf']))
-    $_SESSION['submit_csrf'] = bin2hex(random_bytes(32));
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $category = trim((string)($_POST['categoryID'] ?? ''));
     $name = trim((string)($_POST['device_name'] ?? ''));
     $fault = trim((string)($_POST['fault_description'] ?? ''));
-    $token = $_POST['csrf_token'] ?? '';
 
     // check the form details
     $valid = in_array($category, array_column($categories, 'categoryID'), true);
 
-    if (!is_string($token) || !hash_equals($_SESSION['submit_csrf'], $token))
-        $errors[] = 'Invalid request.';
+    // (the CSRF token was already checked by require_role())
     if (!$valid) $errors[] = 'Select a valid category.';
-    if ($name === '' || strlen($name) > 100) $errors[] = 'Invalid device name.';
-    if ($fault === '' || strlen($fault) > 255) $errors[] = 'Invalid problem description.';
+    if ($name === '' || mb_strlen($name) > 100) $errors[] = 'Invalid device name.';
+    if ($fault === '' || mb_strlen($fault) > 255) $errors[] = 'Invalid problem description.';
     if (($_POST['terms_accepted'] ?? '') !== '1') $errors[] = 'Please accept the terms.';
 
     // check the uploaded photo
@@ -74,7 +68,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     VALUES (?,?,?,'Submitted')", 'sss', [$hid, $id, $tp]);
 
                 $conn->commit();
-                $_SESSION['submit_csrf'] = bin2hex(random_bytes(32));
                 set_flash('success', 'Device submitted successfully!');
                 redirect('index.php');
 
@@ -107,7 +100,7 @@ require '../includes/student_top.php';
     <?php endforeach; ?>
 
     <form method="post" enctype="multipart/form-data" class="submit-form">
-        <input type="hidden" name="csrf_token" value="<?= e($_SESSION['submit_csrf']) ?>">
+        <?= csrf_field() ?>
 
         <div class="submit-field">
             <label for="categoryID">Device Category</label>

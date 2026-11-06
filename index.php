@@ -7,8 +7,6 @@
 require 'config/db.php';
 require 'includes/functions.php';
 
-$logged_in = !empty($_SESSION['tp_number']);
-
 $stats = [
     'devices' => db_value($conn, "SELECT COUNT(*) FROM devices WHERE status <> 'Cancelled'"),
     'points'  => db_value($conn, "SELECT COALESCE(SUM(points), 0) FROM points_transactions WHERE txn_type IN ('earn', 'bonus')"),
@@ -32,12 +30,10 @@ $stats = [
     <header class="land-nav">
         <a class="brand" href="index.php"><span class="brand-mark"><?= icon('recycle', 'icon-spin-hover') ?></span><span class="brand-text">E-Waste &amp; Repair Café</span></a>
         <div class="land-actions">
-            <?php if ($logged_in): ?>
-                <a class="btn btn-primary" href="<?= e(home_for($_SESSION['role'])) ?>"><?= icon('home') ?> My dashboard</a>
-            <?php else: ?>
-                <a class="land-login" href="login.php"><?= icon('user') ?> Log in</a>
-                <a class="btn btn-primary" href="register.php">Sign up</a>
-            <?php endif; ?>
+            <!-- Always show Log in / Sign up. If the user is already logged in,
+                 login.php and register.php send them straight to their own dashboard. -->
+            <a class="land-login" href="login.php"><?= icon('user') ?> Log in</a>
+            <a class="btn btn-primary" href="register.php">Sign up</a>
         </div>
     </header>
 
@@ -48,11 +44,7 @@ $stats = [
             <p class="hero-sub">Repair first. Recycle right. Earn rewards.</p>
             <p class="hero-lead">Bring a broken phone, laptop or charger to the Green Hub. A student volunteer tries to repair it. If it can’t be saved, it’s recycled the proper way, and either way you earn points you can turn into APCard cashback.</p>
             <div class="hero-cta">
-                <?php if ($logged_in): ?>
-                    <a class="btn btn-primary btn-lg" href="<?= e(home_for($_SESSION['role'])) ?>"><?= icon('home') ?> Open my dashboard</a>
-                <?php else: ?>
-                    <a class="btn btn-primary btn-lg" href="register.php"><?= icon('user-plus') ?> Create a free account</a>
-                <?php endif; ?>
+                <a class="btn btn-primary btn-lg" href="register.php"><?= icon('user-plus') ?> Create a free account</a>
             </div>
             <div class="hero-stats">
                 <div><span class="stat-icon tint-mint"><?= icon('device') ?></span><dl><dd><?= number_format($stats['devices']) ?></dd><dt>Devices brought in</dt></dl></div>

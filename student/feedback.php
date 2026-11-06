@@ -1,4 +1,3 @@
-
 <?php
 require '../config/db.php';
 require '../includes/functions.php';
@@ -6,9 +5,6 @@ require_role($conn, 'student', '../');
 
 $tp = $_SESSION['tp_number'];
 $error = '';
-
-if (empty($_SESSION['feedback_csrf']))
-    $_SESSION['feedback_csrf'] = bin2hex(random_bytes(32));
 
 // get my submitted devices
 $devices = db_all($conn,
@@ -19,11 +15,8 @@ $devices = db_all($conn,
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $id = $_POST['deviceID'] ?? '';
     $message = trim((string)($_POST['message'] ?? ''));
-    $token = $_POST['csrf_token'] ?? '';
-
-    if (!is_string($token) || !hash_equals($_SESSION['feedback_csrf'], $token))
-        $error = 'Invalid request.';
-    elseif ($message === '' || mb_strlen($message) > 255)
+    // (the CSRF token was already checked by require_role())
+    if ($message === '' || mb_strlen($message) > 255)
         $error = 'Feedback must be 1 to 255 characters.';
     else {
         // check if the device belongs to user
@@ -51,7 +44,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ($user['name'] ?? $tp) . ' sent feedback about ' . $device['device_name'] . '.');
 
                 $conn->commit();
-                $_SESSION['feedback_csrf'] = bin2hex(random_bytes(32));
                 set_flash('success', 'Feedback submitted successfully.');
                 redirect('feedback.php');
 
@@ -95,7 +87,7 @@ require '../includes/student_top.php';
         <p>Submit a device before sending feedback.</p>
     <?php else: ?>
         <form method="post">
-            <input type="hidden" name="csrf_token" value="<?= e($_SESSION['feedback_csrf']) ?>">
+            <?= csrf_field() ?>
 
             <label for="deviceID">Device</label>
             <select id="deviceID" name="deviceID" required>

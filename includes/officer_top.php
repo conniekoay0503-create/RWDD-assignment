@@ -1,4 +1,3 @@
-
 <?php
 /*
  * Recycling Officer layout - top section.
@@ -68,7 +67,7 @@ $latest = db_all(
 );
 
 $this_page = basename($_SERVER['PHP_SELF']);
-$initial = strtoupper(substr($_SESSION['name'], 0, 1));
+$initial = mb_strtoupper(mb_substr($_SESSION['name'], 0, 1));
 
 // Automatically identify the active navigation section
 foreach ($sections as $key => $section) {

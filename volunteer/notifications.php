@@ -5,17 +5,13 @@
  */
 require '../config/db.php';
 require '../includes/functions.php';
-require '../includes/volunteer_logic.php';
+require_once '../includes/volunteer_logic.php';
 require_role($conn, 'volunteer', '../');
 $me = $_SESSION['tp_number'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'read_all') {
-    if (vol_csrf_ok($_POST['csrf'] ?? null)) {
-        db_exec($conn, "UPDATE notifications SET is_read = 1 WHERE tp_number = ? AND is_read = 0", 's', [$me]);
-        set_flash('success', 'All notifications marked as read.');
-    } else {
-        set_flash('error', 'Session expired. Please try again.');
-    }
+    db_exec($conn, "UPDATE notifications SET is_read = 1 WHERE tp_number = ? AND is_read = 0", 's', [$me]);
+    set_flash('success', 'All notifications marked as read.');
     // "back" says which page the bell was on. Only our own page names are allowed (no open redirect).
     $back = $_POST['back'] ?? '';
     $own_pages = ['index.php', 'my_jobs.php', 'repair_queue.php', 'report.php', 'points.php', 'challenge.php', 'history.php', 'profile.php', 'notifications.php'];
@@ -30,7 +26,7 @@ $active = '';
 require '../includes/volunteer_top.php';
 
 page_head('bell', 'Notifications', 'The latest 50 messages for you.',
-    $unread ? '<form method="post" action="notifications.php">' . vol_csrf_field()
+    $unread ? '<form method="post" action="notifications.php">' . csrf_field()
               . '<input type="hidden" name="action" value="read_all"><button class="btn btn-outline">' . icon('check') . ' Mark all as read</button></form>' : '');
 ?>
 

@@ -6,7 +6,7 @@
  */
 require '../config/db.php';
 require '../includes/functions.php';
-require '../includes/volunteer_logic.php';
+require_once '../includes/volunteer_logic.php';
 require_role($conn, 'volunteer', '../');
 $me = $_SESSION['tp_number'];
 
@@ -15,10 +15,6 @@ $typed  = [];   // what the user typed, shown again when there is an error
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $form = $_POST['form'] ?? '';
-    if (!vol_csrf_ok($_POST['csrf'] ?? null)) {
-        set_flash('error', 'Session expired. Please try again.');
-        redirect('profile.php');
-    }
 
     if ($form === 'details') {
         $name  = trim((string) ($_POST['name'] ?? ''));
@@ -27,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $len   = mb_strlen($name);
 
         if ($len < 2 || $len > 100)                                            $errors['name']  = 'Name must be 2 to 100 characters.';
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 100) $errors['email'] = 'Please enter a valid email address.';
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL) || mb_strlen($email) > 100) $errors['email'] = 'Please enter a valid email address.';
         if (!preg_match('/^[0-9+\- ]{7,15}$/', $phone))                        $errors['phone'] = 'Phone: 7 to 15 characters, digits, +, - or spaces only.';
 
         if (!isset($errors['email']) && db_value($conn, "SELECT COUNT(*) FROM users WHERE email = ? AND tp_number <> ?", 'ss', [$email, $me]) > 0) {
@@ -48,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $hash = (string) db_value($conn, "SELECT password FROM users WHERE tp_number = ?", 's', [$me]);
 
         if (!password_verify($cur, $hash)) $errors['current'] = 'Current password is not correct.';
-        if (strlen($new) < 8 || !preg_match('/[A-Za-z]/', $new) || !preg_match('/\d/', $new)) {
+        if (mb_strlen($new) < 8 || !preg_match('/[A-Za-z]/', $new) || !preg_match('/\d/', $new)) {
             $errors['new'] = 'New password needs at least 8 characters, with a letter and a number.';
         } elseif ($new === $cur) {
             $errors['new'] = 'The new password must be different from the current one.';
@@ -94,7 +90,7 @@ function vol_err($errors, $key) { return isset($errors[$key]) ? '<small class="f
         <section class="tab-panel" id="details" hidden>
             <h2 class="card-title"><?= icon('user') ?> Personal details</h2>
             <form method="post" action="profile.php#details" data-validate novalidate>
-                <?= vol_csrf_field() ?>
+                <?= csrf_field() ?>
                 <input type="hidden" name="form" value="details">
                 <div class="field <?= isset($errors['name']) && ($_POST['form'] ?? '') === 'details' ? 'has-error' : '' ?>">
                     <label for="p-name">Full name</label>
@@ -127,7 +123,7 @@ function vol_err($errors, $key) { return isset($errors[$key]) ? '<small class="f
         <section class="tab-panel" id="password" hidden>
             <h2 class="card-title"><?= icon('lock') ?> Change password</h2>
             <form method="post" action="profile.php#password" autocomplete="off" data-validate novalidate>
-                <?= vol_csrf_field() ?>
+                <?= csrf_field() ?>
                 <input type="hidden" name="form" value="password">
                 <?php foreach (['current' => 'Current password', 'new' => 'New password', 'confirm' => 'Confirm new password'] as $k => $t): ?>
                     <div class="field">

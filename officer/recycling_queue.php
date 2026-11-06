@@ -27,16 +27,6 @@ $active = 'recycling';
 require '../includes/officer_top.php';
 ?>
 
-<?php if (($_GET['success'] ?? '') === '1'): ?>
-    <div class="card" role="status">
-        <strong><?= icon('check') ?> Recycling completed!</strong>
-        <p class="muted">
-            Device processed, points awarded,
-            and student notified.
-        </p>
-    </div>
-<?php endif; ?>
-
 <?php
 officer_page_head(
     'recycle',

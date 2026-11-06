@@ -89,7 +89,7 @@ page_head('wallet', 'Cashback requests', 'Approve a request, then pay the amount
     <?php foreach ($pending as $p): ?>
         <article class="request-card">
             <header>
-                <span class="avatar small"><?= e(strtoupper(substr($p['name'], 0, 1))) ?></span>
+                <span class="avatar small"><?= e(mb_strtoupper(mb_substr($p['name'], 0, 1))) ?></span>
                 <div>
                     <strong><?= e($p['name']) ?></strong>
                     <small class="muted"><?= e($p['tp_number']) ?> · <?= e($p['email']) ?></small>
@@ -104,11 +104,13 @@ page_head('wallet', 'Cashback requests', 'Approve a request, then pay the amount
             </ul>
             <footer>
                 <form method="post" data-confirm="Approve and pay <?= rm($p['cash_value']) ?> to <?= e($p['email']) ?>?">
+                    <?= csrf_field() ?>
                     <input type="hidden" name="action" value="approve">
                     <input type="hidden" name="redemptionID" value="<?= e($p['redemptionID']) ?>">
                     <button class="btn btn-primary btn-sm"><?= icon('check') ?> Approve &amp; pay</button>
                 </form>
                 <form method="post" data-confirm="Reject this request? The points will be returned to the student.">
+                    <?= csrf_field() ?>
                     <input type="hidden" name="action" value="reject">
                     <input type="hidden" name="redemptionID" value="<?= e($p['redemptionID']) ?>">
                     <button class="btn btn-outline btn-sm"><?= icon('x') ?> Reject</button>

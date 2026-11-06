@@ -1,14 +1,24 @@
-
 <?php
+/*
+ * Abandoned devices: waiting at the Green Hub counter for more than 7 days.
+ * The rule is the same on every page: overdue_sql(WAITING_FOR_OWNER) in functions.php.
+ * (A device nobody claimed in 7 days is turned into 'Returned Unclaimed' automatically by require_role().)
+ *
+ * Two actions:
+ *   notify  - remind a volunteer to follow up (at most once a day per device)
+ *   dispose - the owner never came: the officer disposes of it (status 'Disposed').
+ *             Allowed only for devices in this list, so a 'Return Requested' device can never be disposed:
+ *             that owner has asked for it back.
+ * The CSRF token is checked by require_role().
+ */
 require '../config/db.php';
 require '../includes/functions.php';
 require_role($conn, 'officer', '../');
 
-if (empty($_SESSION['followup_csrf']))
-    $_SESSION['followup_csrf'] = bin2hex(random_bytes(32));
-
-$csrf = $_SESSION['followup_csrf'];
+$me = $_SESSION['tp_number'];
 $error = '';
+$where = overdue_sql(WAITING_FOR_OWNER, 'd.');
+$methods = ['Certified e-waste recycler', 'Battery take-back programme', 'Metal recovery', 'Harvest parts for repair stock'];
 
 $volunteers = db_all($conn, "
     SELECT u.tp_number, u.name
@@ -18,24 +28,21 @@ $volunteers = db_all($conn, "
     ORDER BY u.name
 ");
 
-$where = "((d.status IN ('Dropped Off', 'Returned Unrepaired',
-          'Ready for Collection')
-          AND d.status_changed_at <= NOW() - INTERVAL 7 DAY)
-          OR d.status = 'Returned Unclaimed')";
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = $_POST['action'] ?? '';
     $id = $_POST['deviceID'] ?? '';
-    $tp = $_POST['volunteerTP'] ?? '';
-    $token = $_POST['csrf_token'] ?? '';
 
-    if (!is_string($token) || !hash_equals($csrf, $token)) {
-        $error = 'Invalid request.';
-    } else {
-        $device = db_one($conn, "
-            SELECT d.deviceID, d.device_name, d.status
-            FROM devices d WHERE d.deviceID = ? AND $where
-        ", 's', [$id]);
+    // The device must still be in the overdue list (checked again on the server, not only in the browser)
+    $device = db_one($conn, "
+        SELECT d.deviceID, d.device_name, d.status, d.submitted_by
+        FROM devices d WHERE d.deviceID = ? AND $where
+    ", 's', [$id]);
 
+    if (!$device) {
+        $error = 'This device is not in the overdue list any more.';
+
+    } elseif ($action === 'notify') {
+        $tp = $_POST['volunteerTP'] ?? '';
         $volunteer = db_one($conn, "
             SELECT v.tp_number
             FROM volunteers v
@@ -43,77 +50,88 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             WHERE v.tp_number = ? AND u.is_active = 1
         ", 's', [$tp]);
 
-        if (!$device || !$volunteer) {
-            $error = 'Invalid device or Volunteer.';
+        $title = 'Device Follow-up: ' . $id;
+        $duplicate = db_value($conn, "
+            SELECT COUNT(*) FROM notifications
+            WHERE tp_number = ? AND title = ?
+            AND created_at >= NOW() - INTERVAL 1 DAY
+        ", 'ss', [$tp, $title]);
+
+        if (!$volunteer) {
+            $error = 'Please choose a volunteer.';
+        } elseif ($duplicate) {
+            $error = 'Volunteer already notified within 24 hours.';
         } else {
-            $title = 'Device Follow-up: ' . $id;
-            $message = "Please follow up on {$device['device_name']} ($id). "
-                     . "Current status: {$device['status']}.";
+            notify($conn, $tp, $title, "Please follow up on {$device['device_name']} ($id). "
+                                    . "Current status: {$device['status']}.");
+            set_flash('success', 'Volunteer notified successfully.');
+            redirect('abandoned_devices.php');
+        }
 
-            $duplicate = db_value($conn, "
-                SELECT COUNT(*) FROM notifications
-                WHERE tp_number = ? AND title = ?
-                AND created_at >= NOW() - INTERVAL 1 DAY
-            ", 'ss', [$tp, $title]);
-
-            if ($duplicate) {
-                $error = 'Volunteer already notified within 24 hours.';
-            } else {
-                try {
-                    $next = db_value($conn, "
-                        SELECT COALESCE(MAX(CAST(SUBSTRING(notificationID, 2)
-                        AS UNSIGNED)), 0) + 1 FROM notifications
-                    ");
-                    $nid = 'N' . str_pad($next, 3, '0', STR_PAD_LEFT);
-
-                    db_exec($conn, "
-                        INSERT INTO notifications
-                        (notificationID, tp_number, created_by,
-                        title, message, is_read, created_at)
-                        VALUES (?, ?, NULL, ?, ?, 0, NOW())
-                    ", 'ssss', [$nid, $tp, $title, $message]);
-
-                    set_flash('success', 'Volunteer notified successfully.');
-                    redirect('abandoned_devices.php');
-                } catch (Throwable $e) {
-                    error_log($e->getMessage());                    
-                    $error = 'Unable to send notification. Please try again.';
+    } elseif ($action === 'dispose') {
+        $method = $_POST['disposal_method'] ?? '';
+        if (!in_array($method, $methods, true)) {
+            $error = 'Please choose a disposal method.';
+        } else {
+            $conn->begin_transaction();
+            try {
+                // The WHERE repeats the overdue rule: if the owner collected it a moment ago, 0 rows change
+                $n = db_exec($conn, "
+                    UPDATE devices d SET d.status = 'Disposed', d.disposal_method = ?, d.processed_by = ?, d.status_changed_at = NOW()
+                    WHERE d.deviceID = ? AND $where
+                ", 'sss', [$method, $me, $id]);
+                if ($n !== 1) {
+                    throw new RuntimeException('This device is not in the overdue list any more.');
                 }
+                db_exec($conn, "INSERT INTO device_status_history (historyID, deviceID, changed_by, new_status, remarks) VALUES (?, ?, ?, 'Disposed', ?)",
+                    'ssss', [next_id($conn, 'device_status_history', 'historyID', 'H'), $id, $me,
+                             'Not collected within ' . DEADLINE_DAYS . ' days; method: ' . $method]);
+                notify($conn, $device['submitted_by'], 'Device disposed',
+                    'Your ' . $device['device_name'] . ' was not collected within ' . DEADLINE_DAYS . ' days, so it has been disposed of (' . $method . ').');
+                $conn->commit();
+                set_flash('success', $device['device_name'] . ' has been disposed of. The owner was notified.');
+                redirect('abandoned_devices.php');
+            } catch (Throwable $e) {
+                $conn->rollback();
+                error_log($e->getMessage());
+                $error = $e instanceof RuntimeException ? $e->getMessage() : 'Unable to dispose of the device. Please try again.';
             }
         }
+
+    } else {
+        $error = 'Unknown action.';
     }
 }
 
 $devices = db_all($conn, "
     SELECT d.deviceID, d.device_name, d.status, d.recycle_consent,
            d.claimed_by, u.name AS student_name,
-           DATE_ADD(d.status_changed_at, INTERVAL 7 DAY) AS deadline
+           DATE_ADD(d.status_changed_at, INTERVAL " . DEADLINE_DAYS . " DAY) AS deadline
     FROM devices d
     JOIN users u ON d.submitted_by = u.tp_number
     WHERE $where
     ORDER BY d.status_changed_at
 ");
 
-$unclaimed = count(array_filter($devices, fn($d) =>
-    in_array($d['status'], ['Dropped Off', 'Returned Unclaimed'])));
+$unclaimed = count(array_filter($devices, fn($d) => $d['status'] === 'Returned Unclaimed'));
 $uncollected = count($devices) - $unclaimed;
 
 $page_title = 'Abandoned Devices';
 $active = 'devices';
 require '../includes/officer_top.php';
 officer_page_head('clock', 'Abandoned Devices',
-    'Monitor overdue devices and notify Volunteers for follow-up.');
+    'Devices waiting at the Green Hub for more than ' . DEADLINE_DAYS . ' days. Remind a volunteer, or dispose of the device.');
 ?>
 
 <?php if ($error): ?>
-    <p class="muted" role="alert"><?= e($error) ?></p>
+    <div class="alert alert-error" role="alert" data-flash="error"><?= icon('alert') ?><span><?= e($error) ?></span></div>
 <?php endif; ?>
 
 <section class="stat-grid three">
     <?php foreach ([
         ['alert', 'tint-rose', count($devices), 'Total Flagged'],
-        ['clock', 'tint-gold', $unclaimed, 'Unclaimed Repairs'],
-        ['device', 'tint-mint', $uncollected, 'Uncollected Devices']
+        ['clock', 'tint-gold', $unclaimed, 'Never Claimed'],
+        ['device', 'tint-mint', $uncollected, 'Not Collected']
     ] as [$ico, $tint, $value, $label]): ?>
         <div class="stat-card">
             <span class="stat-icon <?= $tint ?>"><?= icon($ico) ?></span>
@@ -137,18 +155,12 @@ officer_page_head('clock', 'Abandoned Devices',
             <thead>
                 <tr>
                     <th>ID</th><th>Device</th><th>Student</th>
-                    <th>Status</th><th>Deadline</th><th>Consent</th>
-                    <th>Required Follow-up</th><th>Notify Volunteer</th>
+                    <th>Status</th><th>Deadline</th>
+                    <th>Notify Volunteer</th><th>Dispose</th>
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($devices as $d):
-                    $action = match ($d['status']) {
-                        'Dropped Off' => 'Review unclaimed repair',
-                        'Returned Unclaimed' => 'Arrange device return',
-                        default => 'Follow up on collection'
-                    };
-                ?>
+                <?php foreach ($devices as $d): ?>
                 <tr class="device-row"
                     data-search="<?= e(strtolower(implode(' ', [
                         $d['deviceID'], $d['device_name'],
@@ -157,16 +169,12 @@ officer_page_head('clock', 'Abandoned Devices',
                     <td><?= e($d['deviceID']) ?></td>
                     <td><?= e($d['device_name']) ?></td>
                     <td><?= e($d['student_name']) ?></td>
-                    <td><span class="badge"><?= e($d['status']) ?></span></td>
-                    <td><?= $d['status'] === 'Returned Unclaimed'
-                        ? 'Deadline passed' : nice_date($d['deadline']) ?></td>
-                    <td><span class="badge">
-                        <?= (int)$d['recycle_consent'] === 1 ? 'Yes' : 'No' ?>
-                    </span></td>
-                    <td><?= e($action) ?></td>
+                    <td><span class="badge <?= e('status-' . strtolower(str_replace(' ', '-', $d['status']))) ?>"><?= e($d['status']) ?></span></td>
+                    <td>Passed (<?= nice_date($d['deadline']) ?>)</td>
                     <td>
                         <form method="post" data-confirm="Notify this Volunteer?">
-                            <input type="hidden" name="csrf_token" value="<?= e($csrf) ?>">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="action" value="notify">
                             <input type="hidden" name="deviceID" value="<?= e($d['deviceID']) ?>">
                             <select name="volunteerTP" required>
                                 <option value="">Select Volunteer</option>
@@ -179,6 +187,22 @@ officer_page_head('clock', 'Abandoned Devices',
                             </select>
                             <button class="btn btn-primary" type="submit">
                                 <?= icon('bell') ?> Notify
+                            </button>
+                        </form>
+                    </td>
+                    <td>
+                        <form method="post" data-confirm="Dispose of <?= e($d['device_name']) ?>? The owner did not collect it. This cannot be undone.">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="action" value="dispose">
+                            <input type="hidden" name="deviceID" value="<?= e($d['deviceID']) ?>">
+                            <select name="disposal_method" required>
+                                <option value="">Select method</option>
+                                <?php foreach ($methods as $m): ?>
+                                    <option value="<?= e($m) ?>"><?= e($m) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <button class="btn btn-danger" type="submit">
+                                <?= icon('trash') ?> Dispose
                             </button>
                         </form>
                     </td>
@@ -195,8 +219,7 @@ officer_page_head('clock', 'Abandoned Devices',
 </section>
 
 <p class="muted">
-    Volunteers handle overdue follow-ups. Officers send reminders
-    and process approved recycling. No automatic status changes.
+    A device whose owner asked for it back ("Return Requested") never appears here, so it can never be disposed of.
 </p>
 
 <script>

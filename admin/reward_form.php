@@ -15,8 +15,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stock  = filter_var($_POST['stock'] ?? '', FILTER_VALIDATE_INT);
 
     $errors = [];
-    if ($name === '' || strlen($name) > 100) $errors[] = 'Reward name is required (max 100 characters).';
-    if ($desc === '' || strlen($desc) > 255) $errors[] = 'Description is required (max 255 characters).';
+    if ($name === '' || mb_strlen($name) > 100) $errors[] = 'Reward name is required (max 100 characters).';
+    if ($desc === '' || mb_strlen($desc) > 255) $errors[] = 'Description is required (max 255 characters).';
     if ($points === false || $points <= 0)   $errors[] = 'Points required must be a whole number above 0.';
     if ($cash === false || $cash <= 0)       $errors[] = 'Cash value must be above 0.';
     if ($stock === false || $stock < 0)      $errors[] = 'Stock must be 0 or more.';
@@ -64,6 +64,7 @@ page_head($edit ? 'edit' : 'plus', $edit ? 'Edit reward' : 'Add a reward', 'Stud
 <section class="card narrow">
     <form method="post" novalidate data-validate
           data-confirm="<?= $edit ? 'Save the changes to ' . e($edit['reward_name']) . '?' : 'Add this new reward? Students will see it straight away.' ?>">
+        <?= csrf_field() ?>
         <input type="hidden" name="rewardID" value="<?= e($edit['rewardID'] ?? '') ?>">
         <div class="field">
             <label for="reward_name"><?= icon('gift') ?> Reward name</label>

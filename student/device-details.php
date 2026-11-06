@@ -1,4 +1,3 @@
-
 <?php
 require '../config/db.php';
 require '../includes/functions.php';
@@ -8,14 +7,11 @@ $tp = $_SESSION['tp_number'];
 $id = trim((string)($_GET['id'] ?? ''));
 $error = '';
 
+// A wrong or someone else's device: go back to My Devices with a message (not a blank page)
 if (!preg_match('/^D[0-9]{3,9}$/', $id)) {
-    exit('Invalid device ID.');
+    set_flash('error', 'Invalid device ID.');
+    redirect('my-devices.php');
 }
-
-if (empty($_SESSION['device_csrf'])) {
-    $_SESSION['device_csrf'] = bin2hex(random_bytes(32));
-}
-$csrf = $_SESSION['device_csrf'];
 
 $sql = "SELECT d.*, c.category_name
         FROM devices d
@@ -23,9 +19,14 @@ $sql = "SELECT d.*, c.category_name
         WHERE d.deviceID = ? AND d.submitted_by = ?";
 
 $device = db_one($conn, $sql, 'ss', [$id, $tp]);
-if (!$device) exit('Device not found.');
+if (!$device) {
+    set_flash('error', 'Device not found.');
+    redirect('my-devices.php');
+}
 
+// action => [from status, to status, button text]. The page shows a button only when the device is in the "from" status.
 $actions = [
+    'drop_off' => ['Submitted', 'Dropped Off', 'Mark as dropped off'],   // the student has brought it to the Green Hub
     'cancel' => ['Submitted', 'Cancelled', 'Cancel'],
     'allow_recycling' => ['Pending Consent', 'Awaiting Recycle', 'Recycle'],
     'request_return' => ['Pending Consent', 'Return Requested', 'Request Return'],
@@ -35,11 +36,8 @@ $actions = [
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
-    $token = $_POST['csrf_token'] ?? '';
-
-    if (!is_string($token) ||
-        !hash_equals($csrf, $token) ||
-        !isset($actions[$action])) {
+    // (the CSRF token was already checked by require_role())
+    if (!isset($actions[$action])) {
         $error = 'Invalid request.';
     } else {
         [$from, $to] = $actions[$action];
@@ -144,7 +142,7 @@ require '../includes/student_top.php';
         <?php if ($status !== $a[0]) continue; ?>
         <form method="post"
               onsubmit="return confirm('Are you sure?')">
-            <input type="hidden" name="csrf_token" value="<?= e($csrf) ?>">
+            <?= csrf_field() ?>
             <input type="hidden" name="action" value="<?= e($key) ?>">
             <button class="btn btn-primary"><?= e($a[2]) ?></button>
         </form>

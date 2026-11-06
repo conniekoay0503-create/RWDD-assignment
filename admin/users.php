@@ -66,7 +66,7 @@ page_head('users', 'All users', 'Activate or deactivate accounts. Inactive users
             <tbody>
             <?php foreach ($users as $u): ?>
                 <tr data-role="<?= e($u['role']) ?>">
-                    <td><span class="name-cell"><span class="avatar small"><?= e(strtoupper(substr($u['name'], 0, 1))) ?></span><?= e($u['name']) ?></span></td>
+                    <td><span class="name-cell"><span class="avatar small"><?= e(mb_strtoupper(mb_substr($u['name'], 0, 1))) ?></span><?= e($u['name']) ?></span></td>
                     <td><?= e($u['tp_number']) ?></td>
                     <td><?= e($u['email']) ?></td>
                     <td><span class="badge role-<?= strtolower($u['role']) ?>"><?= icon($role_icon[$u['role']]) ?> <?= e($u['role']) ?></span></td>
@@ -77,6 +77,7 @@ page_head('users', 'All users', 'Activate or deactivate accounts. Inactive users
                             <small class="muted">You</small>
                         <?php else: ?>
                             <form method="post" data-confirm="<?= $u['is_active'] ? 'Deactivate' : 'Activate' ?> <?= e($u['name']) ?>?">
+                                <?= csrf_field() ?>
                                 <input type="hidden" name="action" value="set_active">
                                 <input type="hidden" name="tp_number" value="<?= e($u['tp_number']) ?>">
                                 <input type="hidden" name="is_active" value="<?= $u['is_active'] ? '0' : '1' ?>">

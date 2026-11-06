@@ -1,13 +1,9 @@
-
 <?php
 require '../config/db.php';
 require '../includes/functions.php';
 require_role($conn, 'student', '../');
 
 $tp = $_SESSION['tp_number'];
-
-if (empty($_SESSION['redeem_csrf']))
-    $_SESSION['redeem_csrf'] = bin2hex(random_bytes(32));
 
 // get my points and available rewards
 $points = (int)db_value($conn, "SELECT COALESCE(SUM(points),0)
@@ -59,7 +55,7 @@ require '../includes/student_top.php';
                 <p>Stock: <?= $stock ?></p>
 
                 <form method="post" action="redeem.php">
-                    <input type="hidden" name="csrf_token" value="<?= e($_SESSION['redeem_csrf']) ?>">
+                    <?= csrf_field() ?>
                     <input type="hidden" name="rewardID" value="<?= e($r['rewardID']) ?>">
                     <button class="btn btn-primary" <?= !$canRedeem ? 'disabled' : '' ?>>
                         <?= $canRedeem ? 'Redeem' : "Can't Redeem" ?>

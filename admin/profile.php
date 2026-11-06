@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'details') {
         $name  = trim($_POST['name'] ?? '');
         $phone = trim($_POST['phone'] ?? '');
-        if ($name === '' || strlen($name) > 100) {
+        if ($name === '' || mb_strlen($name) > 100) {
             set_flash('error', 'Name is required (max 100 characters).');
         } elseif (!preg_match('/^[0-9]{9,15}$/', $phone)) {
             set_flash('error', 'Phone number must be 9 to 15 digits, numbers only.');
@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!password_verify($current, $hash)) {
             set_flash('error', 'Your current password is wrong.');
-        } elseif (strlen($new) < 8) {
+        } elseif (mb_strlen($new) < 8) {
             set_flash('error', 'The new password must be at least 8 characters.');
         } elseif ($new !== $confirm) {
             set_flash('error', 'The new passwords do not match.');
@@ -73,6 +73,7 @@ page_head('user', 'My profile', 'Your details and password.');
     <section class="card tab-panel" id="details" role="tabpanel">
         <h2>Personal details</h2>
         <form method="post" novalidate data-validate data-confirm="Save your new details?">
+            <?= csrf_field() ?>
             <input type="hidden" name="action" value="details">
             <div class="field">
                 <label for="name">Full name</label>
@@ -100,6 +101,7 @@ page_head('user', 'My profile', 'Your details and password.');
     <section class="card tab-panel" id="password" role="tabpanel">
         <h2>Change password</h2>
         <form method="post" novalidate data-validate data-confirm="Change your password? Use the new one the next time you log in.">
+            <?= csrf_field() ?>
             <input type="hidden" name="action" value="password">
             <div class="field">
                 <label for="current_password">Current password</label>

@@ -4,7 +4,8 @@
  * Every page includes config/db.php first, then this file.
  */
 
-require_once __DIR__ . '/icons.php';   // icon() helper for SVG icons
+require_once __DIR__ . '/icons.php';                  // icon() helper for SVG icons
+require_once __DIR__ . '/collection_deadlines.php';   // check_collection_deadlines(), called by require_role()
 
 // "Keep me signed in" keeps the session for up to 30 days, so the server must not delete it earlier
 ini_set('session.gc_maxlifetime', 60 * 60 * 24 * 30);
@@ -117,6 +118,83 @@ function notify_admins($conn, $title, $message)
     }
 }
 
+/* ---------- Points (one rule for the whole website) ---------- */
+
+// Points for one device = weight x multiplier (x 2 if repaired), rounded DOWN, but never more than the max.
+// round(..., 2) first: computers store 0.29 * 100 as 28.999999..., and floor() alone would give 28 instead of 29.
+// Used by the volunteer pages (repaired) and the officer pages (recycled). main.js uses the same rule for the calculator.
+function calc_points($kg, $multiplier, $max, $repaired = false)
+{
+    $raw = (float) $kg * (float) $multiplier * ($repaired ? 2 : 1);
+    return (int) min(floor(round($raw, 2)), (int) $max);
+}
+
+/* ---------- Deadlines (one rule for the whole website) ---------- */
+
+const DEADLINE_DAYS = 7;   // a device may wait this many days before it counts as overdue
+
+// The device is at the Green Hub counter and the OWNER must come and collect it
+const WAITING_FOR_OWNER = ['Ready for Collection', 'Returned Unrepaired', 'Returned Unclaimed'];
+// Someone must decide or act: the owner (recycle or return?) or the volunteer (take it to the counter)
+const WAITING_FOR_ACTION = ['Pending Consent', 'Return Requested'];
+
+// ['A', 'B'] -> 'A', 'B'  for an SQL IN (...) list.
+// Only use it with our own constants (never with text typed by a user), so it is safe inside the SQL.
+function sql_list($values)
+{
+    return "'" . implode("', '", $values) . "'";
+}
+
+// SQL condition for "overdue", e.g. overdue_sql(WAITING_FOR_OWNER, 'd.')
+// -> d.status IN ('Ready for Collection', ...) AND d.status_changed_at < NOW() - INTERVAL 7 DAY
+function overdue_sql($statuses, $alias = '')
+{
+    return $alias . 'status IN (' . sql_list($statuses) . ') AND ' . $alias . 'status_changed_at < NOW() - INTERVAL ' . DEADLINE_DAYS . ' DAY';
+}
+
+/* ---------- Challenges (one rule for the whole website) ---------- */
+
+// A device counts for a challenge when it was repaired (and collected) or recycled during the challenge.
+// 'Disposed' does not count: the owner never came back for it.
+const CHALLENGE_STATUSES = ['Completed', 'Recycled'];
+
+// kg one student reached in one challenge ($challenge = a row from the challenges table)
+function challenge_kg($conn, $challenge, $tp_number)
+{
+    return (float) db_value($conn,
+        "SELECT COALESCE(SUM(weight_kg), 0) FROM devices
+          WHERE submitted_by = ? AND status IN (" . sql_list(CHALLENGE_STATUSES) . ")
+            AND status_changed_at >= ? AND status_changed_at < DATE_ADD(?, INTERVAL 1 DAY)",
+        'sss', [$tp_number, $challenge['start_date'], $challenge['end_date']]);
+}
+
+/* ---------- CSRF protection (one token for the whole website) ---------- */
+
+// CSRF = a bad website makes the browser of a logged-in user send a form to OUR site.
+// The browser sends our cookie automatically, so the session alone cannot tell the difference.
+// Fix: every form carries a secret token that only our pages know. A bad website cannot read it.
+
+// Put this inside every <form method="post">
+function csrf_field()
+{
+    if (empty($_SESSION['csrf'])) {
+        $_SESSION['csrf'] = bin2hex(random_bytes(32));   // 64 random characters, made once per session
+    }
+    return '<input type="hidden" name="csrf" value="' . $_SESSION['csrf'] . '">';
+}
+
+// Called by require_role() (and by login.php / register.php), so every page is checked automatically.
+// The token stays the same for the whole session, so two open tabs both keep working.
+function check_csrf()
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') return;
+    $sent = $_POST['csrf'] ?? '';
+    if (empty($_SESSION['csrf']) || !is_string($sent) || !hash_equals($_SESSION['csrf'], $sent)) {
+        set_flash('error', 'Your session has expired. Please try again.');
+        redirect($_SERVER['REQUEST_URI']);   // back to the same page as a normal GET, nothing is saved
+    }
+}
+
 /* ---------- Roles and access control ---------- */
 
 // Figure 2: check the role tables in order admins -> officers -> volunteers -> students
@@ -150,7 +228,12 @@ function require_role($conn, $role, $root)
         set_flash('error', 'Your account has been deactivated. Please contact an Admin.');
         redirect($root . 'login.php');
     }
+    // Check the role again on every page: if an admin approved this student as a volunteer
+    // (or assigned them as an officer) while they were logged in, they move to the new role straight away.
+    $_SESSION['role'] = find_role($conn, $_SESSION['tp_number']);
     if ($_SESSION['role'] !== $role) {
         redirect($root . home_for($_SESSION['role']));
     }
+    check_csrf();                        // every POST form must carry the token
+    check_collection_deadlines($conn);   // overdue notifications (XAMPP has no scheduler, so we check on every page)
 }

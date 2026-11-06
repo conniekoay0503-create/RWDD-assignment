@@ -10,6 +10,9 @@ if (!empty($_SESSION['tp_number'])) {
     redirect(home_for($_SESSION['role']));
 }
 
+// This page does not use require_role(), so it checks the CSRF token itself
+check_csrf();
+
 $errors = [];
 $old = ['name' => '', 'tp_number' => '', 'phone' => '', 'email' => ''];
 
@@ -37,10 +40,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($old['phone'] !== '' && !preg_match('/^[0-9]{9,15}$/', $old['phone'])) {
         $errors[] = 'Phone number must contain 9 to 15 digits only.';
     }
-    if (strlen($old['name']) > 100) {
+    if (mb_strlen($old['name']) > 100) {
         $errors[] = 'Name must be 100 characters or fewer.';
     }
-    if ($password !== '' && strlen($password) < 8) {
+    if ($password !== '' && mb_strlen($password) < 8) {
         $errors[] = 'Password must be at least 8 characters.';
     }
     if ($password !== $confirm) {
@@ -91,6 +94,7 @@ require 'includes/public_top.php';
         <?php endif; ?>
 
         <form method="post" action="register.php" novalidate data-validate data-register>
+            <?= csrf_field() ?>
             <div class="field">
                 <label for="name">Full name</label>
                 <input type="text" id="name" name="name" maxlength="100" value="<?= e($old['name']) ?>" required autocomplete="name">

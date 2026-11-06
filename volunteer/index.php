@@ -5,11 +5,10 @@
  */
 require '../config/db.php';
 require '../includes/functions.php';
-require '../includes/volunteer_logic.php';
+require_once '../includes/volunteer_logic.php';
 require_role($conn, 'volunteer', '../');
 
 $me = $_SESSION['tp_number'];
-vol_return_expired($conn);   // keep the queue number honest (lazy check, see volunteer_logic.php)
 
 $jobs    = vol_my_jobs($conn, $me);
 $queue   = vol_queue($conn, $me);

@@ -37,8 +37,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $errors = [];
-    if ($title === '' || strlen($title) > 100)                 $errors[] = 'Title is required (max 100 characters).';
-    if ($desc === '' || strlen($desc) > 255)                   $errors[] = 'Description is required (max 255 characters).';
+    if ($title === '' || mb_strlen($title) > 100)                 $errors[] = 'Title is required (max 100 characters).';
+    if ($desc === '' || mb_strlen($desc) > 255)                   $errors[] = 'Description is required (max 255 characters).';
     if ($target === false || $target <= 0 || $target > 999999) $errors[] = 'Target must be above 0 kg.';
     if ($bonus === false || $bonus <= 0)                       $errors[] = 'Bonus points must be a whole number above 0.';
     if (!$valid_date($start) || !$valid_date($end)) {
@@ -72,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $msg = $desc . ' Runs ' . nice_date($start) . ' to ' . nice_date($end) . '. Reach ' . ($target + 0) . ' kg to earn ' . $bonus . ' bonus points.';
             $ann_id = next_id($conn, 'announcements', 'announcementID', 'A');
             db_exec($conn, "INSERT INTO announcements (announcementID, created_by, title, message) VALUES (?, ?, ?, ?)",
-                'ssss', [$ann_id, $me, 'New challenge: ' . $title, substr($msg, 0, 500)]);
+                'ssss', [$ann_id, $me, 'New challenge: ' . $title, mb_substr($msg, 0, 500)]);
             $conn->commit();
             set_flash('success', 'Challenge created and announced to everyone.');
         } catch (mysqli_sql_exception $ex) {
@@ -100,6 +100,7 @@ page_head($edit ? 'edit' : 'plus', $edit ? 'Edit challenge' : 'Create a challeng
 <section class="card narrow">
     <form method="post" novalidate data-validate
           data-confirm="<?= $edit ? 'Save the changes to this challenge?' : 'Create this challenge and post it on the announcement board?' ?>">
+        <?= csrf_field() ?>
         <input type="hidden" name="challengeID" value="<?= e($edit['challengeID'] ?? '') ?>">
         <div class="field">
             <label for="title"><?= icon('flag') ?> Title</label>
