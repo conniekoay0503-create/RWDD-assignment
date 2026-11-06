@@ -26,6 +26,8 @@ Built with plain PHP 8 (mysqli), MySQL / MariaDB, HTML, CSS and JavaScript. No f
 
 If your MySQL has a password or does not use port 3306, change `config/db.php`.
 
+**Optional:** to see a longer volunteer leaderboard, also run `database/volunteer_extra_test_data.sql` in the **SQL** tab after the import.
+
 **Importing again:** the SQL file does not delete old tables. To reset the demo data, drop all tables in `ewaste_repair_cafe` first (select all tables, then **Drop**), then import again.
 
 ## 2. Demo accounts
@@ -57,6 +59,8 @@ includes/
   admin_top.php    admin_bottom.php      Top bar + menu / closing tags for admin pages
   student_top.php  student_bottom.php    Same for student pages
   officer_top.php  officer_bottom.php    Same for officer pages
+  volunteer_top.php  volunteer_bottom.php   Same for volunteer pages
+  volunteer_logic.php                    Database functions used by the volunteer pages
   collection_deadlines.php               check_collection_deadlines(): sends "Overdue" notifications
 
 admin/      Dashboard, Categories (+ points calculator), Challenges, Cashback (requests, history, rewards),
@@ -66,13 +70,16 @@ student/    Dashboard, Submit a Device, My Devices, Device Details, Points & Cas
             Challenges & Leaderboard, Feedback, Become a Volunteer, My Report, Notifications
 officer/    Dashboard, Recycling Queue, Process / Confirm Recycling, Abandoned Devices,
             Recycling History, Recycling Statistics, Notifications
-volunteer/  Repair volunteer pages (work in progress, see section 9)
+volunteer/  Dashboard, Repair Queue (claim a device), My Jobs (notes, fixed / can't be fixed,
+            ready at the counter), Repair History, Points & Cashback, Challenge & Rank,
+            Repair Report, Notifications, Profile
 
 assets/css/style.css      All styles for the whole website (no Bootstrap)
 assets/js/main.js         All JavaScript for the whole website
 assets/img/               SVG pictures for the homepage
 uploads/devices/          Device photos uploaded by students
 database/ewaste_repair_cafe.sql   Tables + demo data
+database/volunteer_extra_test_data.sql   Optional: 2 more volunteers, so the leaderboard has more rows
 ```
 
 Every page inside `admin/`, `student/`, `officer/` and `volunteer/` starts with the same 3 lines. Keep them:
@@ -202,4 +209,3 @@ When a student does something an admin must handle (redeems cashback, sends feed
 
 - `next_id()` uses MAX + 1. If two people insert into the same table at exactly the same moment, they could get the same ID and the second INSERT fails. This is acceptable for the assignment.
 - Challenge bonus points are not given automatically. The student page shows progress only.
-- The `volunteer/` folder is not connected yet. Its pages still need to be moved into place: the top / bottom files go to `includes/`, `volunteer.css` goes into `assets/css/style.css`, and each page needs `require_role($conn, 'volunteer', '../')`.

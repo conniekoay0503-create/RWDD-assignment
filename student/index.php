@@ -38,6 +38,8 @@ require '../includes/student_top.php';
         <a href="submit-device.php" class="btn btn-primary">Submit Device</a>
         <a href="my-devices.php" class="btn btn-sun">My Devices</a>
     </div>
+    <!-- Big faint recycle icon in the background, same as the admin and officer dashboards -->
+    <span class="hero-art" aria-hidden="true"><?= icon('recycle') ?></span>
 </section>
 
 <section class="dashboard-stats">

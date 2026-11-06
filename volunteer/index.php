@@ -55,6 +55,8 @@ require '../includes/volunteer_top.php';
         <a class="btn btn-primary" href="repair_queue.php"><?= icon('inbox') ?> Open repair queue</a>
         <a class="btn btn-outline" href="my_jobs.php"><?= icon('wrench') ?> My jobs</a>
     </div>
+    <!-- Big faint recycle icon in the background, same as the admin and officer dashboards -->
+    <span class="hero-art" aria-hidden="true"><?= icon('recycle') ?></span>
 </section>
 
 <div class="stat-grid" style="margin-top: 1.25rem">
