@@ -1,148 +1,155 @@
 <?php
 /*
- * Admin Dashboard  (Figure 22)
+ * Volunteer Home (wireframe Figure 52). It only READS data.
+ * Every number comes from the vol_* functions, so Home, History and Report always agree.
  */
 require '../config/db.php';
 require '../includes/functions.php';
-require_role($conn, 'admin', '../');
+require '../includes/volunteer_logic.php';
+require_role($conn, 'volunteer', '../');
 
-// ---- "To do" cards ----
-$cash      = db_one($conn, "SELECT COUNT(*) AS n, COALESCE(SUM(cash_value), 0) AS total FROM redemptions WHERE status = 'pending'");
-$fb_new    = db_value($conn, "SELECT COUNT(*) FROM feedback WHERE admin_reply IS NULL");
-$fb_total  = db_value($conn, "SELECT COUNT(*) FROM feedback");
-$vr_new    = db_value($conn, "SELECT COUNT(*) FROM volunteer_request WHERE status = 'pending'");
-$overdue   = db_value($conn, "SELECT COUNT(*) FROM devices
-                              WHERE status IN ('Ready for Collection', 'Pending Consent', 'Return Requested', 'Returned Unrepaired')
-                              AND DATEDIFF(NOW(), status_changed_at) > 7");
-$recycle   = db_value($conn, "SELECT COUNT(*) FROM devices WHERE status = 'Awaiting Recycle'");
+$me = $_SESSION['tp_number'];
+vol_return_expired($conn);   // keep the queue number honest (lazy check, see volunteer_logic.php)
 
-// ---- At a glance (all time) ----
-$diverted  = db_one($conn, "SELECT COUNT(*) AS n, COALESCE(SUM(weight_kg), 0) AS kg FROM devices
-                            WHERE status IN ('Completed', 'Recycled', 'Disposed')");
-$points    = db_value($conn, "SELECT COALESCE(SUM(points), 0) FROM points_transactions WHERE txn_type IN ('earn', 'bonus')");
-// Repair success = devices that were ever "Ready for Collection" / devices that got an outcome
-$outcome   = db_one($conn, "SELECT COUNT(DISTINCT CASE WHEN new_status = 'Ready for Collection' THEN deviceID END) AS fixed,
-                                   COUNT(DISTINCT CASE WHEN new_status = 'Pending Consent' THEN deviceID END) AS unfixable
-                            FROM device_status_history");
-$decided   = $outcome['fixed'] + $outcome['unfixable'];
-$success   = $decided > 0 ? round($outcome['fixed'] / $decided * 100) : 0;
+$jobs    = vol_my_jobs($conn, $me);
+$queue   = vol_queue($conn, $me);
+$balance = vol_points_balance($conn, $me);
+$stats   = vol_stats($conn, $me);
+$month   = vol_month_counts($conn, $me);
 
-// ---- What devices are now (all 14 statuses, even when the count is 0) ----
-$statuses = ['Submitted', 'Dropped Off', 'Claimed', 'In Repair', 'Ready for Collection', 'Completed', 'Pending Consent',
-             'Return Requested', 'Awaiting Recycle', 'Recycled', 'Returned Unrepaired', 'Collected Unrepaired', 'Disposed', 'Cancelled'];
-$counts = array_fill_keys($statuses, 0);
-foreach (db_all($conn, "SELECT status, COUNT(*) AS n FROM devices GROUP BY status") as $row) {
-    $counts[$row['status']] = (int) $row['n'];
+// My place on the leaderboard
+$rank = null;
+foreach (vol_leaderboard($conn) as $row) {
+    if ($row['tp_number'] === $me) { $rank = $row['rank']; break; }
 }
-$max_count = max(1, max($counts));
 
-// ---- Recent activity ----
-$recent = db_all($conn, "SELECT h.changed_at, h.new_status, h.remarks, d.device_name, u.name AS by_name
-                         FROM device_status_history h
-                         JOIN devices d ON d.deviceID = h.deviceID
-                         LEFT JOIN users u ON u.tp_number = h.changed_by
-                         ORDER BY h.changed_at DESC, h.historyID DESC LIMIT 15");
+// The biggest cashback the balance can pay for, and the next tier to aim at
+$affordable = null; $next = null;
+foreach (vol_rewards($conn) as $rw) {
+    if ($balance >= (int) $rw['points_required']) $affordable = $rw;
+    elseif ($next === null) $next = $rw;
+}
+$bar = $next ? min(100, (int) round($balance * 100 / (int) $next['points_required'])) : 100;
 
-$todo_total = $cash['n'] + $fb_new + $vr_new;
+$announcements = db_all($conn, "SELECT title, message, created_at FROM announcements ORDER BY created_at DESC, announcementID DESC LIMIT 2");
+$first_name = explode(' ', trim($_SESSION['name']))[0];
 
-$page_title = 'Dashboard';
+$page_title = 'Home';
 $active = 'home';
-require '../includes/admin_top.php';
+require '../includes/volunteer_top.php';
 ?>
+
 <section class="hero-card">
-    <div class="hero-card-text">
-        <h1>Welcome, <?= e(explode(' ', $_SESSION['name'])[0]) ?></h1>
-        <p class="serif-line"><?= $todo_total ? $todo_total . ' thing(s) are waiting for you today.' : 'Nothing is waiting for you. Nice work!' ?></p>
+    <div>
+        <p class="muted"><?= e(date('l, j F')) ?></p>
+        <h1>Hi <?= e($first_name) ?>,</h1>
+        <p class="serif-line">
+            <?php if (!$jobs): ?>
+                You have no jobs in progress. Pick a device from the queue.
+            <?php else: ?>
+                <?= count($jobs) ?> job<?= count($jobs) === 1 ? '' : 's' ?> need<?= count($jobs) === 1 ? 's' : '' ?> your action.
+            <?php endif; ?>
+        </p>
     </div>
     <div class="hero-actions">
-        <a class="btn btn-primary" href="announcement_form.php"><?= icon('megaphone') ?> Post announcement</a>
-        <a class="btn btn-sun" href="challenge_form.php"><?= icon('flag') ?> New challenge</a>
+        <a class="btn btn-primary" href="repair_queue.php"><?= icon('inbox') ?> Open repair queue</a>
+        <a class="btn btn-outline" href="my_jobs.php"><?= icon('wrench') ?> My jobs</a>
     </div>
-    <span class="hero-art" aria-hidden="true"><?= icon('recycle') ?></span>
 </section>
 
-<h2 class="section-title"><?= icon('clock') ?> To do</h2>
-<section class="stat-grid">
-    <a class="stat-card todo <?= $cash['n'] ? 'has-work' : '' ?>" href="cashback.php">
+<div class="stat-grid" style="margin-top: 1.25rem">
+    <a class="stat-card" href="points.php">
         <span class="stat-icon tint-gold"><?= icon('wallet') ?></span>
-        <strong class="stat-value"><?= (int) $cash['n'] ?></strong>
-        <span class="stat-title">Cashback to pay</span>
-        <small><?= rm($cash['total']) ?> in total</small>
+        <span class="stat-value"><?= $balance ?><small>pts</small></span>
+        <span class="stat-title">Points balance</span>
+        <div class="bar" style="margin: 0.3rem 0"><span style="width: <?= $bar ?>%"></span></div>
+        <small><?= $affordable ? 'Enough for RM' . number_format((float) $affordable['cash_value'], 0) . ' cashback' : 'Keep earning to unlock cashback' ?></small>
     </a>
-    <a class="stat-card todo <?= $fb_new ? 'has-work' : '' ?>" href="feedback.php?filter=new">
-        <span class="stat-icon tint-sky"><?= icon('message') ?></span>
-        <strong class="stat-value"><?= (int) $fb_new ?></strong>
-        <span class="stat-title">Feedback to reply</span>
-        <small><?= (int) $fb_total ?> message(s) in total</small>
-    </a>
-    <a class="stat-card todo <?= $vr_new ? 'has-work' : '' ?>" href="volunteer_requests.php">
-        <span class="stat-icon tint-rose"><?= icon('heart') ?></span>
-        <strong class="stat-value"><?= (int) $vr_new ?></strong>
-        <span class="stat-title">Volunteer requests</span>
-        <small>Approve or reject</small>
-    </a>
-    <div class="stat-card">
-        <span class="stat-icon tint-red"><?= icon('alert') ?></span>
-        <strong class="stat-value"><?= (int) $overdue ?></strong>
-        <span class="stat-title">Overdue devices</span>
-        <small>Officer handles · view only</small>
+    <div class="stat-card <?= $jobs ? 'has-work' : '' ?>">
+        <span class="stat-icon tint-sky"><?= icon('wrench') ?></span>
+        <span class="stat-value"><?= count($jobs) ?></span>
+        <span class="stat-title">Open jobs</span>
+        <small>waiting for you</small>
     </div>
     <div class="stat-card">
-        <span class="stat-icon tint-mint"><?= icon('recycle') ?></span>
-        <strong class="stat-value"><?= (int) $recycle ?></strong>
-        <span class="stat-title">Waiting to recycle</span>
-        <small>Officer handles · view only</small>
+        <span class="stat-icon tint-mint"><?= icon('check') ?></span>
+        <span class="stat-value"><?= $stats['rate'] === null ? '–' : (int) $stats['rate'] . '<small>%</small>' ?></span>
+        <span class="stat-title">Success rate</span>
+        <small><?= $stats['rate'] === null ? 'no finished jobs yet' : 'of finished jobs' ?></small>
     </div>
-</section>
-
-<div class="section-head">
-    <h2 class="section-title"><?= icon('chart') ?> At a glance</h2>
-    <a class="link-arrow" href="reports.php">Open reports <?= icon('arrow-right') ?></a>
+    <div class="stat-card">
+        <span class="stat-icon tint-rose"><?= icon('recycle') ?></span>
+        <span class="stat-value"><?= $month['fixed'] ?></span>
+        <span class="stat-title">Fixed this month</span>
+        <small><?= $month['recycled'] ?> recycled</small>
+    </div>
+    <a class="stat-card" href="challenge.php">
+        <span class="stat-icon tint-gold"><?= icon('flag') ?></span>
+        <span class="stat-value"><?= $rank !== null ? '#' . (int) $rank : '–' ?></span>
+        <span class="stat-title">Leaderboard</span>
+        <small><?= e(vol_kg_number($stats['kg'])) ?> kg handled</small>
+    </a>
 </div>
-<section class="stat-grid four">
-    <div class="stat-card row"><span class="stat-icon tint-mint"><?= icon('device') ?></span><div><strong class="stat-value"><?= (int) $diverted['n'] ?></strong><span class="stat-title">Devices processed</span></div></div>
-    <div class="stat-card row"><span class="stat-icon tint-mint"><?= icon('leaf') ?></span><div><strong class="stat-value"><?= number_format($diverted['kg'], 2) ?><small>kg</small></strong><span class="stat-title">Kept out of landfill</span></div></div>
-    <div class="stat-card row"><span class="stat-icon tint-gold"><?= icon('star') ?></span><div><strong class="stat-value"><?= number_format($points) ?></strong><span class="stat-title">Points issued</span></div></div>
-    <div class="stat-card row"><span class="stat-icon tint-sky"><?= icon('wrench') ?></span><div><strong class="stat-value"><?= $success ?><small>%</small></strong><span class="stat-title">Repair success</span></div></div>
-</section>
 
 <div class="two-col">
     <section class="card">
-        <h2 class="card-title"><?= icon('box') ?> What devices are now</h2>
-        <ul class="bar-list">
-            <?php foreach ($counts as $status => $n): ?>
-                <li>
-                    <span class="badge status-<?= e(strtolower(str_replace(' ', '-', $status))) ?>"><?= e($status) ?></span>
-                    <span class="bar" aria-hidden="true"><span style="width: <?= round($n / $max_count * 100) ?>%"></span></span>
-                    <strong><?= $n ?></strong>
-                </li>
-            <?php endforeach; ?>
-        </ul>
-        <div class="bar-total"><span><?= icon('device') ?> All devices</span><strong><?= array_sum($counts) ?></strong></div>
+        <div class="card-head"><h2 class="card-title"><?= icon('wrench') ?> Needs your action</h2><a class="link-arrow" href="my_jobs.php">My jobs <?= icon('arrow-right') ?></a></div>
+        <?php if (!$jobs): ?>
+            <?php empty_state('check', 'Nothing needs your action. Claim a device from the repair queue to start a job.') ?>
+        <?php else: ?>
+            <ul class="simple-list">
+                <?php foreach (array_slice($jobs, 0, 4) as $j): ?>
+                    <li>
+                        <div>
+                            <strong><?= e($j['device_name']) ?> <small class="muted"><?= e($j['deviceID']) ?></small></strong>
+                            <small class="muted">
+                                <?= $j['status'] === 'Claimed' ? 'Collect it from the Green Hub, then confirm receipt.'
+                                  : ($j['status'] === 'In Repair' ? 'In repair. Add a note or mark the outcome.'
+                                  : 'The owner wants it back. Put it at the counter.') ?>
+                            </small>
+                        </div>
+                        <a class="btn btn-primary btn-sm" style="margin-left: auto" href="my_jobs.php#job-<?= e($j['deviceID']) ?>">Open</a>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
     </section>
 
     <section class="card">
-        <div class="card-head">
-            <h2 class="card-title"><?= icon('history') ?> Recent activity</h2>
-            <label class="search-box"><?= icon('search') ?><input type="search" placeholder="Search" data-filter-list="activity" aria-label="Search recent activity"></label>
-        </div>
-        <ul class="activity" id="activity" data-show-limit="6">
-            <?php foreach ($recent as $r): ?>
-                <li>
-                    <span class="activity-dot"><?= icon('arrow-right') ?></span>
-                    <div>
-                        <strong><?= e($r['device_name']) ?></strong> → <?= e($r['new_status']) ?>
-                        <?php if ($r['remarks']): ?><em>(<?= e($r['remarks']) ?>)</em><?php endif; ?>
-                        <small><?= e($r['by_name'] ?? 'System') ?> · <?= nice_date($r['changed_at'], true) ?></small>
-                    </div>
-                </li>
-            <?php endforeach; ?>
-        </ul>
-        <?php if (!$recent) empty_state('history', 'No activity yet.'); ?>
-        <div class="card-foot">
-            <button type="button" class="btn btn-outline btn-sm" data-show-more="activity"><?= icon('plus') ?> Show more</button>
-            <button type="button" class="btn btn-outline btn-sm" data-show-less="activity">Show less</button>
-        </div>
+        <div class="card-head"><h2 class="card-title"><?= icon('inbox') ?> Repair queue · <?= count($queue) ?> waiting</h2><a class="link-arrow" href="repair_queue.php">See all <?= icon('arrow-right') ?></a></div>
+        <?php if (!$queue): ?>
+            <?php empty_state('inbox', 'No devices are waiting right now.') ?>
+        <?php else: ?>
+            <ul class="simple-list">
+                <?php foreach (array_slice($queue, 0, 4) as $d): ?>
+                    <li>
+                        <div>
+                            <strong><?= e($d['device_name']) ?></strong>
+                            <small class="muted"><?= e($d['deviceID']) ?> · <?= e($d['category_name']) ?></small>
+                        </div>
+                        <span class="badge <?= (int) $d['days_left'] <= 1 ? 'badge-urgent' : ((int) $d['days_left'] <= 3 ? 'badge-warn' : 'badge-ok') ?>" style="margin-left: auto"><?= e(vol_days_left_text($d['days_left'])) ?></span>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
     </section>
 </div>
-<?php require '../includes/admin_bottom.php'; ?>
+
+<section class="card">
+    <div class="card-head"><h2 class="card-title"><?= icon('megaphone') ?> Announcements</h2></div>
+    <?php if (!$announcements): ?>
+        <?php empty_state('megaphone', 'No announcements yet.') ?>
+    <?php else: ?>
+        <div class="two-col">
+            <?php foreach ($announcements as $a): ?>
+                <div>
+                    <strong><?= e($a['title']) ?></strong>
+                    <p class="muted" style="margin: 0.2rem 0"><?= e($a['message']) ?></p>
+                    <small class="muted"><?= nice_date($a['created_at']) ?></small>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    <?php endif; ?>
+</section>
+
+<?php require '../includes/volunteer_bottom.php'; ?>
