@@ -45,6 +45,7 @@ page_head('bell', 'Notifications', 'Messages sent to you by the system and other
         </nav>
         <?php if ($unread): ?>
             <form method="post">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="read_all">
                 <button class="btn btn-outline btn-sm"><?= icon('check') ?> Mark all as read</button>
             </form>
@@ -60,6 +61,7 @@ page_head('bell', 'Notifications', 'Messages sent to you by the system and other
                 </div>
                 <?php if (!$n['is_read']): ?>
                     <form method="post">
+                        <?= csrf_field() ?>
                         <input type="hidden" name="action" value="read_one">
                         <input type="hidden" name="notificationID" value="<?= e($n['notificationID']) ?>">
                         <input type="hidden" name="back" value="notifications.php">

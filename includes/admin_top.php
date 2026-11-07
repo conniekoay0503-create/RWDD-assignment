@@ -50,7 +50,7 @@ $unread = db_value($conn, "SELECT COUNT(*) FROM notifications WHERE tp_number = 
 $latest = db_all($conn, "SELECT title, message, is_read, created_at FROM notifications
                          WHERE tp_number = ? ORDER BY is_read, created_at DESC, notificationID DESC LIMIT 6", 's', [$_SESSION['tp_number']]);
 $this_page = basename($_SERVER['PHP_SELF']);   // e.g. "users.php"
-$initial = strtoupper(substr($_SESSION['name'], 0, 1));
+$initial = mb_strtoupper(mb_substr($_SESSION['name'], 0, 1));
 
 // Page title with an icon, followed by the tabs of the current section
 function page_head($icon_name, $title, $desc = '', $actions = '')
@@ -120,13 +120,6 @@ function empty_state($icon_name, $text, $action = '')
     </nav>
 
     <div class="topbar-tools">
-        <div class="text-size" aria-label="Text size">
-            <button type="button" data-text-size="-1" aria-label="Smaller text">A-</button>
-            <span data-text-size-label>100%</span>
-            <button type="button" data-text-size="1" aria-label="Larger text">A+</button>
-        </div>
-        <button type="button" class="icon-btn" data-theme-toggle aria-label="Toggle dark mode" title="Dark mode"><?= icon('moon', 'theme-moon') ?><?= icon('sun', 'theme-sun') ?></button>
-
         <!-- Notification bell -->
         <div class="dropdown">
             <button type="button" class="icon-btn bell" data-dropdown="notif-panel" aria-expanded="false" title="Notifications"
@@ -136,6 +129,7 @@ function empty_state($icon_name, $text, $action = '')
                     <strong>Notifications</strong>
                     <?php if ($unread): ?>
                         <form method="post" action="notifications.php">
+                            <?= csrf_field() ?>
                             <input type="hidden" name="action" value="read_all">
                             <input type="hidden" name="back" value="<?= e($this_page) ?>">
                             <button class="link-btn"><?= icon('check') ?> Mark all as read</button>

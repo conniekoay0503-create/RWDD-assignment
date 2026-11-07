@@ -51,6 +51,7 @@ page_head('megaphone', 'Announcements', 'News for everyone. They appear on every
                 <span class="icon-actions">
                     <a class="btn-icon" href="announcement_form.php?edit=<?= e($a['announcementID']) ?>" title="Edit" aria-label="Edit <?= e($a['title']) ?>"><?= icon('edit') ?></a>
                     <form method="post" data-confirm="Delete this announcement?">
+                        <?= csrf_field() ?>
                         <input type="hidden" name="action" value="delete">
                         <input type="hidden" name="announcementID" value="<?= e($a['announcementID']) ?>">
                         <button class="btn-icon danger" title="Delete" aria-label="Delete <?= e($a['title']) ?>"><?= icon('trash') ?></button>

@@ -1,4 +1,3 @@
-
 <?php
 require '../config/db.php';
 require '../includes/functions.php';
@@ -8,14 +7,11 @@ $tp = $_SESSION['tp_number'];
 $id = trim((string)($_GET['id'] ?? ''));
 $error = '';
 
+// A wrong or someone else's device: go back to My Devices with a message (not a blank page)
 if (!preg_match('/^D[0-9]{3,9}$/', $id)) {
-    exit('Invalid device ID.');
+    set_flash('error', 'Invalid device ID.');
+    redirect('my-devices.php');
 }
-
-if (empty($_SESSION['device_csrf'])) {
-    $_SESSION['device_csrf'] = bin2hex(random_bytes(32));
-}
-$csrf = $_SESSION['device_csrf'];
 
 $sql = "SELECT d.*, c.category_name
         FROM devices d
@@ -23,23 +19,37 @@ $sql = "SELECT d.*, c.category_name
         WHERE d.deviceID = ? AND d.submitted_by = ?";
 
 $device = db_one($conn, $sql, 'ss', [$id, $tp]);
-if (!$device) exit('Device not found.');
+if (!$device) {
+    set_flash('error', 'Device not found.');
+    redirect('my-devices.php');
+}
 
+// action => [from status, to status, button text]. The page shows a button only when the device is in the "from" status.
 $actions = [
+    'drop_off' => ['Submitted', 'Dropped Off', 'Mark as dropped off'],   // the student has brought it to the Green Hub
     'cancel' => ['Submitted', 'Cancelled', 'Cancel'],
     'allow_recycling' => ['Pending Consent', 'Awaiting Recycle', 'Recycle'],
     'request_return' => ['Pending Consent', 'Return Requested', 'Request Return'],
     'collect_repaired' => ['Ready for Collection', 'Completed', 'Confirm Collection'],
-    'collect_unrepaired' => ['Returned Unrepaired', 'Collected Unrepaired', 'Confirm Collection']
+    'collect_unrepaired' => ['Returned Unrepaired', 'Collected Unrepaired', 'Confirm Collection'],
+    'collect_unclaimed' => ['Returned Unclaimed', 'Collected Unrepaired', 'Confirm Collection']   // nobody claimed it in 7 days
+];
+
+// How each button looks: [icon, button class, the question in the confirm pop-up]
+$action_look = [
+    'drop_off' => ['check', 'btn-primary', 'Have you brought this device to the Green Hub?'],
+    'cancel' => ['x', 'btn-danger', 'Cancel this submission? This cannot be undone.'],
+    'allow_recycling' => ['recycle', 'btn-primary', 'Allow the Green Hub to recycle this device? You will earn points.'],
+    'request_return' => ['arrow-left', 'btn-outline', 'Ask for this device back? A volunteer will take it to the counter.'],
+    'collect_repaired' => ['check', 'btn-primary', 'Have you collected this device from the Green Hub?'],
+    'collect_unrepaired' => ['check', 'btn-primary', 'Have you collected this device from the Green Hub?'],
+    'collect_unclaimed' => ['check', 'btn-primary', 'Have you collected this device from the Green Hub?'],
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
-    $token = $_POST['csrf_token'] ?? '';
-
-    if (!is_string($token) ||
-        !hash_equals($csrf, $token) ||
-        !isset($actions[$action])) {
+    // (the CSRF token was already checked by require_role())
+    if (!isset($actions[$action])) {
         $error = 'Invalid request.';
     } else {
         [$from, $to] = $actions[$action];
@@ -109,60 +119,64 @@ $photo = $device['photo_path'] ?? '';
 
 $page_title = 'Device Details';
 require '../includes/student_top.php';
+page_head('device', $device['device_name'], $id . ' · ' . $device['category_name'],
+    '<a class="btn btn-outline" href="my-devices.php">' . icon('arrow-left') . ' Back to My Devices</a>');
 ?>
 
-<div class="student-page-head">
-    <span class="page-icon">📱</span>
+<?php if ($error): ?>
+    <div class="alert alert-error" role="alert" data-flash="error"><?= icon('alert') ?><span><?= e($error) ?></span></div>
+<?php endif; ?>
+
+<div class="two-col">
+    <section class="card">
+        <h2 class="card-title"><?= icon('info') ?> About this device</h2>
+        <?php if ($photo && preg_match('~^uploads/devices/[a-zA-Z0-9_.-]+$~', $photo)): ?>
+            <img class="device-photo" src="../<?= e($photo) ?>" alt="Photo of <?= e($device['device_name']) ?>">
+        <?php endif; ?>
+        <dl class="info-list">
+            <dt>Status</dt><dd><span class="badge <?= e($class) ?>"><?= e($status) ?></span></dd>
+            <dt>Category</dt><dd><?= e($device['category_name']) ?></dd>
+            <dt>Problem</dt><dd><?= e($device['fault_description']) ?></dd>
+            <dt>Submitted</dt><dd><?= e(nice_date($device['submitted_at'])) ?></dd>
+        </dl>
+    </section>
+
     <div>
-        <h1>Device Details</h1>
-        <p>Track your device status.</p>
+        <section class="card">
+            <h2 class="card-title"><?= icon('clock') ?> What you can do</h2>
+            <?php $shown = 0; ?>
+            <div class="btn-row">
+            <?php foreach ($actions as $key => $a): ?>
+                <?php if ($status !== $a[0]) continue; $shown++; [$ico, $btn, $ask] = $action_look[$key]; ?>
+                <form method="post" data-confirm="<?= e($ask) ?>">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="<?= e($key) ?>">
+                    <button class="btn <?= $btn ?>"><?= icon($ico) ?> <?= e($a[2]) ?></button>
+                </form>
+            <?php endforeach; ?>
+            </div>
+            <?php if (!$shown): ?>
+                <p class="muted"><?= icon('info') ?> Nothing to do right now. We will send you a notification when the status changes.</p>
+            <?php endif; ?>
+        </section>
+
+        <section class="card">
+            <h2 class="card-title"><?= icon('history') ?> Timeline</h2>
+            <?php if (!$history): ?>
+                <p class="muted">No history yet.</p>
+            <?php else: ?>
+                <ol class="timeline">
+                <?php foreach ($history as $h): ?>
+                    <li>
+                        <strong><?= e($h['new_status']) ?></strong>
+                        <?php if ($h['remarks']): ?><span class="muted"> · <?= e($h['remarks']) ?></span><?php endif; ?>
+                        <small class="muted"><?= e(nice_date($h['changed_at'], true)) ?></small>
+                    </li>
+                <?php endforeach; ?>
+                </ol>
+            <?php endif; ?>
+        </section>
     </div>
 </div>
-
-<section class="card student-panel">
-    <a href="my-devices.php" class="btn">&larr; Back</a>
-    <?php if ($error): ?>
-        <p class="alert alert-error"><?= e($error) ?></p>
-    <?php endif; ?>
-
-    <h2><?= e($device['device_name']) ?></h2>
-    <?php if ($photo &&
-        preg_match('~^uploads/devices/[a-zA-Z0-9_.-]+$~', $photo)): ?>
-        <img src="../<?= e($photo) ?>" width="240" alt="Device">
-    <?php endif; ?>
-
-    <p>ID: <?= e($id) ?></p>
-    <p>Category: <?= e($device['category_name']) ?></p>
-    <p>Problem: <?= e($device['fault_description']) ?></p>
-    <p>Submitted: <?= e(nice_date($device['submitted_at'])) ?></p>
-    <p>Status:
-        <span class="badge <?= e($class) ?>"><?= e($status) ?></span>
-    </p>
-
-    <h2>Actions</h2>
-    <?php foreach ($actions as $key => $a): ?>
-        <?php if ($status !== $a[0]) continue; ?>
-        <form method="post"
-              onsubmit="return confirm('Are you sure?')">
-            <input type="hidden" name="csrf_token" value="<?= e($csrf) ?>">
-            <input type="hidden" name="action" value="<?= e($key) ?>">
-            <button class="btn btn-primary"><?= e($a[2]) ?></button>
-        </form>
-    <?php endforeach; ?>
-
-    <h2>Status History</h2>
-    <div class="table-wrap">
-        <table>
-            <tr><th>Status</th><th>Remarks</th><th>Date</th></tr>
-            <?php foreach ($history as $h): ?>
-                <tr>
-                    <td><?= e($h['new_status']) ?></td>
-                    <td><?= e($h['remarks'] ?: '-') ?></td>
-                    <td><?= e(nice_date($h['changed_at'])) ?></td>
-                </tr>
-            <?php endforeach; ?>
-        </table>
-    </div>
-</section>
 
 <?php require '../includes/student_bottom.php'; ?>

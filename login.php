@@ -10,6 +10,9 @@ if (!empty($_SESSION['tp_number'])) {
     redirect(home_for($_SESSION['role']));
 }
 
+// This page does not use require_role(), so it checks the CSRF token itself
+check_csrf();
+
 $error = '';
 $email = '';
 
@@ -69,6 +72,7 @@ require 'includes/public_top.php';
         <?php endif; ?>
 
         <form method="post" action="login.php" novalidate data-validate>
+            <?= csrf_field() ?>
             <div class="field">
                 <label for="email">Email</label>
                 <input type="email" id="email" name="email" value="<?= e($email) ?>" required autocomplete="email">

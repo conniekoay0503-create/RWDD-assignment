@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $active = isset($_POST['is_active']) ? 1 : 0;
 
     $errors = [];
-    if ($name === '' || strlen($name) > 50)             $errors[] = 'Category name is required (max 50 characters).';
+    if ($name === '' || mb_strlen($name) > 50)             $errors[] = 'Category name is required (max 50 characters).';
     if ($mult === false || $mult <= 0 || $mult > 99999) $errors[] = 'Multiplier must be a number above 0.';
     if ($max === false || $max <= 0)                    $errors[] = 'Max points must be a whole number above 0.';
     // Name must be unique (ignore the category we are editing)
@@ -57,6 +57,7 @@ page_head($edit ? 'edit' : 'plus', $edit ? 'Edit ' . $edit['category_name'] : 'A
 <section class="card narrow">
     <form method="post" novalidate data-validate
           data-confirm="<?= $edit ? 'Save the changes to ' . e($edit['category_name']) . '?' : 'Add this new category?' ?>">
+        <?= csrf_field() ?>
         <input type="hidden" name="categoryID" value="<?= e($edit['categoryID'] ?? '') ?>">
         <div class="field">
             <label for="category_name"><?= icon('tag') ?> Category name</label>

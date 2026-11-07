@@ -59,6 +59,7 @@ page_head('tag', 'Categories & points', 'Repaired = weight × multiplier × 2 ·
                 <a class="btn btn-outline btn-sm" href="category_form.php?edit=<?= e($c['categoryID']) ?>"><?= icon('edit') ?> Edit</a>
                 <?php if ($c['devices'] == 0): ?>
                     <form method="post" data-confirm="Delete <?= e($c['category_name']) ?>?">
+                        <?= csrf_field() ?>
                         <input type="hidden" name="action" value="delete">
                         <input type="hidden" name="categoryID" value="<?= e($c['categoryID']) ?>">
                         <button class="btn btn-danger btn-sm"><?= icon('trash') ?> Delete</button>

@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'details') {
         $name  = trim($_POST['name'] ?? '');
         $phone = trim($_POST['phone'] ?? '');
-        if ($name === '' || strlen($name) > 100) {
+        if ($name === '' || mb_strlen($name) > 100) {
             set_flash('error', 'Name is required (max 100 characters).');
         } elseif (!preg_match('/^[0-9]{9,15}$/', $phone)) {
             set_flash('error', 'Phone number must be 9 to 15 digits, numbers only.');
@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!password_verify($current, $hash)) {
             set_flash('error', 'Your current password is wrong.');
-        } elseif (strlen($new) < 8) {
+        } elseif (mb_strlen($new) < 8) {
             set_flash('error', 'The new password must be at least 8 characters.');
         } elseif ($new !== $confirm) {
             set_flash('error', 'The new passwords do not match.');
@@ -59,7 +59,7 @@ $user = db_one($conn, "SELECT u.*, a.assigned_at, b.name AS assigned_by_name
 $page_title = 'My profile';
 $active = '';
 require '../includes/admin_top.php';
-page_head('user', 'My profile', 'Your details, password and display preferences.');
+page_head('user', 'My profile', 'Your details and password.');
 ?>
 
 <div class="profile-layout" data-tabs>
@@ -67,13 +67,13 @@ page_head('user', 'My profile', 'Your details, password and display preferences.
         <button type="button" role="tab" data-tab="details"><?= icon('id') ?> Personal details</button>
         <button type="button" role="tab" data-tab="password"><?= icon('key') ?> Password</button>
         <button type="button" role="tab" data-tab="role"><?= icon('shield') ?> My role</button>
-        <button type="button" role="tab" data-tab="preferences"><?= icon('sliders') ?> Preferences</button>
         <button type="button" role="tab" data-tab="account"><?= icon('lock') ?> Account</button>
     </nav>
 
     <section class="card tab-panel" id="details" role="tabpanel">
         <h2>Personal details</h2>
         <form method="post" novalidate data-validate data-confirm="Save your new details?">
+            <?= csrf_field() ?>
             <input type="hidden" name="action" value="details">
             <div class="field">
                 <label for="name">Full name</label>
@@ -101,6 +101,7 @@ page_head('user', 'My profile', 'Your details, password and display preferences.
     <section class="card tab-panel" id="password" role="tabpanel">
         <h2>Change password</h2>
         <form method="post" novalidate data-validate data-confirm="Change your password? Use the new one the next time you log in.">
+            <?= csrf_field() ?>
             <input type="hidden" name="action" value="password">
             <div class="field">
                 <label for="current_password">Current password</label>
@@ -134,27 +135,6 @@ page_head('user', 'My profile', 'Your details, password and display preferences.
             <dt>Assigned on</dt><dd><?= nice_date($user['assigned_at']) ?></dd>
         </dl>
         <p class="muted">Admins manage categories, challenges, cashback, users, announcements and reports.</p>
-    </section>
-
-    <section class="card tab-panel" id="preferences" role="tabpanel">
-        <h2>Preferences</h2>
-        <p class="muted">Saved in this browser only.</p>
-        <div class="pref-row">
-            <span>Dark mode</span>
-            <button type="button" class="btn btn-outline btn-sm" data-theme-toggle><?= icon('moon') ?> Toggle dark mode</button>
-        </div>
-        <div class="pref-row">
-            <span>Text size</span>
-            <div class="text-size">
-                <button type="button" data-text-size="-1" aria-label="Smaller text">A-</button>
-                <span data-text-size-label>100%</span>
-                <button type="button" data-text-size="1" aria-label="Larger text">A+</button>
-            </div>
-        </div>
-        <div class="pref-row">
-            <span>Reset to default</span>
-            <button type="button" class="btn btn-outline btn-sm" data-reset-prefs><?= icon('history') ?> Reset</button>
-        </div>
     </section>
 
     <section class="card tab-panel" id="account" role="tabpanel">

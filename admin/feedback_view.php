@@ -10,7 +10,7 @@ $id = trim($_GET['id'] ?? $_POST['feedbackID'] ?? '');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $reply = trim($_POST['admin_reply'] ?? '');
-    if ($reply === '' || strlen($reply) > 255) {
+    if ($reply === '' || mb_strlen($reply) > 255) {
         set_flash('error', 'Reply is required (max 255 characters).');
         redirect('feedback_view.php?id=' . $id);
     }
@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                          WHERE feedbackID = ? AND admin_reply IS NULL", 'sss', [$reply, $me, $id]);
     if ($n === 1) {
         $tp = db_value($conn, "SELECT tp_number FROM feedback WHERE feedbackID = ?", 's', [$id]);
-        notify($conn, $tp, 'Admin replied', 'An admin replied to your feedback: "' . substr($reply, 0, 180) . '"', $me);
+        notify($conn, $tp, 'Admin replied', 'An admin replied to your feedback: "' . mb_substr($reply, 0, 180) . '"', $me);
         set_flash('success', 'Reply sent.');
     } else {
         set_flash('error', 'This feedback has already been replied to.');
@@ -52,7 +52,7 @@ page_head('message', 'Feedback from ' . $view['name'], 'About ' . $view['device_
     <section class="card">
         <div class="chat">
             <div class="bubble from-student">
-                <span class="avatar small"><?= e(strtoupper(substr($view['name'], 0, 1))) ?></span>
+                <span class="avatar small"><?= e(mb_strtoupper(mb_substr($view['name'], 0, 1))) ?></span>
                 <div>
                     <p><?= e($view['message']) ?></p>
                     <small class="muted"><?= e($view['name']) ?> · <?= e($view['email']) ?> · <?= nice_date($view['submitted_at'], true) ?></small>
@@ -70,6 +70,7 @@ page_head('message', 'Feedback from ' . $view['name'], 'About ' . $view['device_
         </div>
         <?php if ($view['admin_reply'] === null): ?>
             <form method="post" novalidate data-validate class="reply-form" data-confirm="Send this reply? It cannot be edited after it is sent.">
+                <?= csrf_field() ?>
                 <input type="hidden" name="feedbackID" value="<?= e($view['feedbackID']) ?>">
                 <div class="field">
                     <label for="admin_reply"><?= icon('send') ?> Your reply <small class="muted" data-count-for="admin_reply"></small></label>

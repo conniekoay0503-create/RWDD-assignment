@@ -1,4 +1,3 @@
-
 <?php
 require '../config/db.php';
 require '../includes/functions.php';
@@ -6,13 +5,9 @@ require_role($conn, 'student', '../');
 
 $tp = $_SESSION['tp_number'];
 $id = trim((string)($_POST['rewardID'] ?? ''));
-$token = $_POST['csrf_token'] ?? '';
 
-// check if the redemption request is valid
-if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !is_string($token) ||
-    empty($_SESSION['redeem_csrf']) ||
-    !hash_equals($_SESSION['redeem_csrf'], $token) ||
-    !preg_match('/^RW?[0-9]{3,9}$/', $id)) {
+// check if the redemption request is valid (the CSRF token was already checked by require_role())
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !preg_match('/^RW?[0-9]{3,9}$/', $id)) {
     set_flash('error', 'Invalid redemption request.');
     redirect('rewards.php');
 }
@@ -73,7 +68,6 @@ try {
         " ($required points). Please process the APCard payment.");
 
     $conn->commit();
-    $_SESSION['redeem_csrf'] = bin2hex(random_bytes(32));
     set_flash('success', 'Redemption submitted. Awaiting Admin approval.');
 
 } catch (Throwable $e) {

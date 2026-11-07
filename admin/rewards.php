@@ -44,6 +44,7 @@ page_head('gift', 'Rewards', 'What students can swap their points for.',
                 <a class="btn btn-outline btn-sm" href="reward_form.php?edit=<?= e($w['rewardID']) ?>"><?= icon('edit') ?> Edit</a>
                 <?php if ($w['times_used'] == 0): ?>
                     <form method="post" data-confirm="Delete <?= e($w['reward_name']) ?>?">
+                        <?= csrf_field() ?>
                         <input type="hidden" name="action" value="delete">
                         <input type="hidden" name="rewardID" value="<?= e($w['rewardID']) ?>">
                         <button class="btn btn-danger btn-sm"><?= icon('trash') ?> Delete</button>

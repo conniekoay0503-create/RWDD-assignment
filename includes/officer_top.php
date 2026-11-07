@@ -1,4 +1,3 @@
-
 <?php
 /*
  * Recycling Officer layout - top section.
@@ -68,7 +67,7 @@ $latest = db_all(
 );
 
 $this_page = basename($_SERVER['PHP_SELF']);
-$initial = strtoupper(substr($_SESSION['name'], 0, 1));
+$initial = mb_strtoupper(mb_substr($_SESSION['name'], 0, 1));
 
 // Automatically identify the active navigation section
 foreach ($sections as $key => $section) {
@@ -224,28 +223,6 @@ function officer_page_head(
     <!-- TOPBAR TOOLS -->
     <div class="topbar-tools">
 
-        <!-- TEXT SIZE -->
-        <div class="text-size" aria-label="Text size">
-            <button type="button"
-                    data-text-size="-1">A-</button>
-
-            <span data-text-size-label>100%</span>
-
-            <button type="button"
-                    data-text-size="1">A+</button>
-        </div>
-
-        <!-- DARK MODE -->
-        <button type="button"
-                class="icon-btn"
-                data-theme-toggle
-                aria-label="Toggle dark mode"
-                title="Dark mode">
-
-            <?= icon('moon', 'theme-moon') ?>
-            <?= icon('sun', 'theme-sun') ?>
-        </button>
-
         <!-- NOTIFICATIONS -->
         <div class="dropdown">
 
@@ -273,6 +250,15 @@ function officer_page_head(
 
                 <div class="dropdown-head">
                     <strong>Notifications</strong>
+                    <?php if ($unread): ?>
+                        <form method="post" action="notifications.php">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="action" value="read_all">
+                            <!-- "back" = the page the bell was on, so the user stays on that page -->
+                            <input type="hidden" name="back" value="<?= e($this_page) ?>">
+                            <button class="link-btn"><?= icon('check') ?> Mark all as read</button>
+                        </form>
+                    <?php endif; ?>
                 </div>
 
                 <ul class="notif-list">
@@ -338,10 +324,10 @@ function officer_page_head(
                     </small>
                 </div>
 
-                <a href="../index.php">
-                    <?= icon('home') ?>
-                    Public homepage
-                </a>
+                <!-- Same 3 links as the admin, student and volunteer menus -->
+                <a href="profile.php"><?= icon('user') ?> My profile</a>
+                <a href="notifications.php"><?= icon('bell') ?> Notifications</a>
+                <a href="../index.php"><?= icon('home') ?> Public homepage</a>
 
             </div>
         </div>

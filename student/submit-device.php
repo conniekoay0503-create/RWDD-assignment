@@ -1,4 +1,3 @@
-
 <?php
 require '../config/db.php';
 require '../includes/functions.php';
@@ -10,23 +9,18 @@ $errors = [];
 $categories = db_all($conn, "SELECT categoryID, category_name FROM categories
     WHERE is_active = 1 ORDER BY categoryID");
 
-if (empty($_SESSION['submit_csrf']))
-    $_SESSION['submit_csrf'] = bin2hex(random_bytes(32));
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $category = trim((string)($_POST['categoryID'] ?? ''));
     $name = trim((string)($_POST['device_name'] ?? ''));
     $fault = trim((string)($_POST['fault_description'] ?? ''));
-    $token = $_POST['csrf_token'] ?? '';
 
     // check the form details
     $valid = in_array($category, array_column($categories, 'categoryID'), true);
 
-    if (!is_string($token) || !hash_equals($_SESSION['submit_csrf'], $token))
-        $errors[] = 'Invalid request.';
+    // (the CSRF token was already checked by require_role())
     if (!$valid) $errors[] = 'Select a valid category.';
-    if ($name === '' || strlen($name) > 100) $errors[] = 'Invalid device name.';
-    if ($fault === '' || strlen($fault) > 255) $errors[] = 'Invalid problem description.';
+    if ($name === '' || mb_strlen($name) > 100) $errors[] = 'Invalid device name.';
+    if ($fault === '' || mb_strlen($fault) > 255) $errors[] = 'Invalid problem description.';
     if (($_POST['terms_accepted'] ?? '') !== '1') $errors[] = 'Please accept the terms.';
 
     // check the uploaded photo
@@ -74,7 +68,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     VALUES (?,?,?,'Submitted')", 'sss', [$hid, $id, $tp]);
 
                 $conn->commit();
-                $_SESSION['submit_csrf'] = bin2hex(random_bytes(32));
                 set_flash('success', 'Device submitted successfully!');
                 redirect('index.php');
 
@@ -90,59 +83,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $page_title = 'Submit a Device';
 require '../includes/student_top.php';
+page_head('plus', 'Submit a Device', 'Register a broken device for repair or recycling. You earn points either way.');
 ?>
 
-<div class="student-page-head">
-    <span class="page-icon">➕</span>
-    <div>
-        <span class="student-eyebrow">STUDENT PORTAL</span>
-        <h1>Submit a Device</h1>
-        <p>Register your electronic device for repair or recycling.</p>
-    </div>
-</div>
+<?php foreach ($errors as $error): ?>
+    <div class="alert alert-error" role="alert" data-flash="error"><?= icon('alert') ?><span><?= e($error) ?></span></div>
+<?php endforeach; ?>
 
-<section class="card student-panel">
-    <?php foreach ($errors as $error): ?>
-        <p class="alert alert-error"><?= e($error) ?></p>
-    <?php endforeach; ?>
+<section class="card">
+    <form method="post" enctype="multipart/form-data" novalidate data-validate data-confirm="Submit this device?">
+        <?= csrf_field() ?>
 
-    <form method="post" enctype="multipart/form-data" class="submit-form">
-        <input type="hidden" name="csrf_token" value="<?= e($_SESSION['submit_csrf']) ?>">
+        <div class="field-row">
+            <div class="field">
+                <label for="categoryID"><?= icon('tag') ?> Device category</label>
+                <select name="categoryID" id="categoryID" required>
+                    <option value="">Select a category</option>
+                    <?php foreach ($categories as $c): ?>
+                        <option value="<?= e($c['categoryID']) ?>"
+                            <?= ($_POST['categoryID'] ?? '') === $c['categoryID'] ? 'selected' : '' ?>>
+                            <?= e($c['category_name']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
 
-        <div class="submit-field">
-            <label for="categoryID">Device Category</label>
-            <select name="categoryID" id="categoryID" required>
-                <option value="">Select Category</option>
-                <?php foreach ($categories as $c): ?>
-                    <option value="<?= e($c['categoryID']) ?>"
-                        <?= ($_POST['categoryID'] ?? '') === $c['categoryID'] ? 'selected' : '' ?>>
-                        <?= e($c['category_name']) ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
+            <div class="field">
+                <label for="device_name"><?= icon('device') ?> Device name</label>
+                <input type="text" id="device_name" name="device_name" maxlength="100" placeholder="e.g. Redmi Note 11"
+                    value="<?= e($_POST['device_name'] ?? '') ?>" required>
+            </div>
         </div>
 
-        <div class="submit-field">
-            <label for="device_name">Device Name</label>
-            <input type="text" id="device_name" name="device_name" maxlength="100"
-                value="<?= e($_POST['device_name'] ?? '') ?>" required>
-        </div>
-
-        <div class="submit-field">
-            <label for="fault_description">Problem Description</label>
-            <textarea id="fault_description" name="fault_description"
+        <div class="field">
+            <label for="fault_description"><?= icon('wrench') ?> Problem description</label>
+            <textarea id="fault_description" name="fault_description" rows="4" placeholder="What is wrong with it? e.g. The battery drains within 2 hours"
                 maxlength="255" required><?= e($_POST['fault_description'] ?? '') ?></textarea>
         </div>
 
-        <div class="submit-field">
-            <label for="device_photo">Device Photo</label>
-            <input type="file" id="device_photo" name="device_photo"
-                accept=".jpg,.jpeg,.png,.webp" required>
-            <small>JPG, PNG or WebP. Maximum 5 MB.</small>
+        <div class="field">
+            <label for="device_photo"><?= icon('eye') ?> Device photo</label>
+            <input type="file" id="device_photo" name="device_photo" accept=".jpg,.jpeg,.png,.webp" required>
+            <small class="field-hint">JPG, PNG or WebP. Maximum 5 MB.</small>
         </div>
 
         <div class="submission-terms">
-            <h3>Device Submission Terms</h3>
+            <h3><?= icon('shield') ?> Device submission terms</h3>
             <p>By submitting this device, I confirm that:</p>
             <ol>
                 <li>The device belongs to me or I have permission to submit it.</li>
@@ -153,15 +139,15 @@ require '../includes/student_top.php';
             </ol>
         </div>
 
-        <label class="submit-terms">
+        <label class="check">
             <input type="checkbox" name="terms_accepted" value="1" required
                 <?= isset($_POST['terms_accepted']) ? 'checked' : '' ?>>
             I have read and agree to the device submission terms.
         </label>
 
-        <div class="submit-actions">
-            <button type="submit" class="btn btn-primary">Submit Device</button>
-            <a href="index.php" class="btn">Back to Dashboard</a>
+        <div class="btn-row">
+            <button type="submit" class="btn btn-primary"><?= icon('send') ?> Submit device</button>
+            <a class="btn btn-outline" href="my-devices.php"><?= icon('x') ?> Cancel</a>
         </div>
     </form>
 </section>

@@ -1,4 +1,3 @@
-
 <?php
 require '../config/db.php';
 require '../includes/functions.php';
@@ -6,8 +5,8 @@ require_role($conn, 'officer', '../');
 
 $deviceID = trim($_GET['deviceID'] ?? '');
 if ($deviceID === '') {
-    http_response_code(400);
-    exit('No device selected.');
+    set_flash('error', 'No device selected.');
+    redirect('recycling_queue.php');
 }
 
 $device = db_one($conn, "
@@ -20,15 +19,16 @@ $device = db_one($conn, "
     LIMIT 1
 ", 's', [$deviceID]);
 
+// A wrong device: back to the queue with a message (not a blank page)
 if (!$device) {
-    http_response_code(404);
-    exit('Device not found.');
+    set_flash('error', 'Device not found.');
+    redirect('recycling_queue.php');
 }
 
 if ($device['status'] !== 'Awaiting Recycle' ||
     (int)$device['recycle_consent'] !== 1) {
-    http_response_code(403);
-    exit('This device is not eligible for recycling.');
+    set_flash('error', 'This device is not waiting for recycling.');
+    redirect('recycling_queue.php');
 }
 
 $methods = [
@@ -37,10 +37,6 @@ $methods = [
     'Metal recovery',
     'Harvest parts for repair stock'
 ];
-
-if (empty($_SESSION['recycle_csrf'])) {
-    $_SESSION['recycle_csrf'] = bin2hex(random_bytes(32));
-}
 
 $page_title = 'Process Recycling';
 $active = 'recycling';
@@ -105,8 +101,7 @@ officer_page_head(
               action="confirm_recycling.php"
               method="POST">
 
-            <input type="hidden" name="csrf_token"
-                   value="<?= e($_SESSION['recycle_csrf']) ?>">
+            <?= csrf_field() ?>
 
             <input type="hidden" name="deviceID"
                    value="<?= e($device['deviceID']) ?>">
@@ -192,8 +187,9 @@ function calculatePoints() {
         return;
     }
 
+    // Same rule as calc_points() in functions.php: round to 2 decimals first, then round DOWN
     const points = Math.min(
-        Math.round(kg * multiplier),
+        Math.floor(Math.round(kg * multiplier * 100) / 100),
         maxPoints
     );
 

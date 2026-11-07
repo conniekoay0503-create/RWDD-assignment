@@ -1,4 +1,3 @@
-
 <?php
 require '../config/db.php';
 require '../includes/functions.php';
@@ -7,49 +6,42 @@ require_role($conn, 'officer', '../');
 $officerTP = $_SESSION['tp_number'];
 $error = '';
 
-if (empty($_SESSION['officer_notifications_csrf'])) {
-    $_SESSION['officer_notifications_csrf'] = bin2hex(random_bytes(32));
-}
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $token = $_POST['csrf_token'] ?? '';
     $action = $_POST['action'] ?? '';
+    // (the CSRF token was already checked by require_role())
+    try {
+        if ($action === 'read_all') {
+            db_exec($conn,
+                "UPDATE notifications SET is_read = 1
+                 WHERE tp_number = ? AND is_read = 0",
+                's', [$officerTP]
+            );
+        } elseif ($action === 'read_one') {
+            $id = $_POST['notificationID'] ?? '';
 
-    if (!is_string($token) ||
-        !hash_equals($_SESSION['officer_notifications_csrf'], $token)) {
-        $error = 'Invalid request. Please refresh the page.';
-    } else {
-        try {
-            if ($action === 'read_all') {
-                db_exec($conn,
-                    "UPDATE notifications SET is_read = 1
-                     WHERE tp_number = ? AND is_read = 0",
-                    's', [$officerTP]
-                );
-            } elseif ($action === 'read_one') {
-                $id = $_POST['notificationID'] ?? '';
-
-                if (!is_string($id) ||
-                    !preg_match('/^N[0-9]{3,9}$/', $id)) {
-                    throw new InvalidArgumentException('Invalid notification.');
-                }
-
-                db_exec($conn,
-                    "UPDATE notifications SET is_read = 1
-                     WHERE notificationID = ?
-                     AND tp_number = ? AND is_read = 0",
-                    'ss', [$id, $officerTP]
-                );
-            } else {
-                throw new InvalidArgumentException('Invalid action.');
+            if (!is_string($id) ||
+                !preg_match('/^N[0-9]{3,9}$/', $id)) {
+                throw new InvalidArgumentException('Invalid notification.');
             }
 
-            set_flash('success', 'Notifications updated.');
-            redirect('notifications.php');
-        } catch (Throwable $e) {
-            error_log($e->getMessage());
-            $error = 'Unable to update notifications.';
+            db_exec($conn,
+                "UPDATE notifications SET is_read = 1
+                 WHERE notificationID = ?
+                 AND tp_number = ? AND is_read = 0",
+                'ss', [$id, $officerTP]
+            );
+        } else {
+            throw new InvalidArgumentException('Invalid action.');
         }
+
+        set_flash('success', 'Notifications updated.');
+        // Go back to the page the bell was on. Only our own page names are allowed (no open redirect).
+        $back = $_POST['back'] ?? 'notifications.php';
+        if (!is_string($back) || !preg_match('/^[a-z_]+\.php$/', $back)) $back = 'notifications.php';
+        redirect($back);
+    } catch (Throwable $e) {
+        error_log($e->getMessage());
+        $error = 'Unable to update notifications.';
     }
 }
 
@@ -101,11 +93,10 @@ require '../includes/officer_top.php';
 
         <?php if ($unreadCount): ?>
             <form method="post">
-                <input type="hidden" name="csrf_token"
-                       value="<?= e($_SESSION['officer_notifications_csrf']) ?>">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="read_all">
                 <button class="btn btn-outline" type="submit">
-                    <?= icon('check') ?> Mark All as Read
+                    <?= icon('check') ?> Mark all as read
                 </button>
             </form>
         <?php endif; ?>
@@ -141,8 +132,7 @@ require '../includes/officer_top.php';
 
                 <?php if (!(int)$n['is_read']): ?>
                     <form method="post">
-                        <input type="hidden" name="csrf_token"
-                               value="<?= e($_SESSION['officer_notifications_csrf']) ?>">
+                        <?= csrf_field() ?>
                         <input type="hidden" name="action" value="read_one">
                         <input type="hidden" name="notificationID"
                                value="<?= e($n['notificationID']) ?>">

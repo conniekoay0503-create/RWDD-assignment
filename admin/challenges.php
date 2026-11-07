@@ -3,6 +3,7 @@
  * Challenges - list  (Figure 26, page 1 of 2)
  * Each challenge is an individual target: a student whose own devices reach target_kg
  * (repaired or recycled between start_date and end_date) earns bonus_points once.
+ * The kg rule is challenge_kg() in functions.php, the same one the student page shows.
  */
 require '../config/db.php';
 require '../includes/functions.php';
@@ -14,6 +15,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
     // "start_date > CURDATE()" inside the DELETE itself, so a started challenge is never deleted
     $n = db_exec($conn, "DELETE FROM challenges WHERE challengeID = ? AND start_date > CURDATE()", 's', [$id]);
     set_flash($n === 1 ? 'success' : 'error', $n === 1 ? 'Challenge deleted.' : 'Only challenges that have not started can be deleted.');
+    redirect('challenges.php');
+}
+
+// ---------- Award bonus (only after the challenge has ended) ----------
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'award') {
+    $id = trim($_POST['challengeID'] ?? '');
+    $ch = db_one($conn, "SELECT * FROM challenges WHERE challengeID = ? AND end_date < CURDATE()", 's', [$id]);
+    if (!$ch) {
+        set_flash('error', 'You can only give the bonus after the challenge has ended.');
+        redirect('challenges.php');
+    }
+    $students = db_all($conn, "SELECT s.tp_number FROM students s JOIN users u ON u.tp_number = s.tp_number WHERE u.is_active = 1");
+    $given = 0;
+    $conn->begin_transaction();
+    try {
+        foreach ($students as $s) {
+            if (challenge_kg($conn, $ch, $s['tp_number']) < (float) $ch['target_kg']) continue;
+            // Already got it? (the UNIQUE key on challengeID + tp_number would also stop a second row)
+            $has = db_value($conn, "SELECT COUNT(*) FROM points_transactions WHERE challengeID = ? AND tp_number = ?", 'ss', [$id, $s['tp_number']]);
+            if ($has) continue;
+            db_exec($conn, "INSERT INTO points_transactions (transactionID, tp_number, challengeID, points, txn_type, description) VALUES (?, ?, ?, ?, 'bonus', ?)",
+                'sssis', [next_id($conn, 'points_transactions', 'transactionID', 'T'), $s['tp_number'], $id, (int) $ch['bonus_points'],
+                          'Challenge bonus: ' . $ch['title']]);
+            notify($conn, $s['tp_number'], 'Challenge bonus', 'You reached the target of ' . $ch['title'] . ' and earned ' . (int) $ch['bonus_points'] . ' bonus points!', $_SESSION['tp_number']);
+            $given++;
+        }
+        $conn->commit();
+        set_flash('success', $given ? 'Bonus given to ' . $given . ' student(s).' : 'No new student reached the target, so no bonus was given.');
+    } catch (Throwable $ex) {
+        $conn->rollback();
+        set_flash('error', 'Something went wrong. Please try again.');
+    }
     redirect('challenges.php');
 }
 
@@ -63,10 +96,19 @@ page_head('flag', 'Challenges', 'Each student who reaches the target with their 
                 <?php if ($c['state'] === 'Upcoming'): ?>
                     <a class="btn btn-outline btn-sm" href="challenge_form.php?edit=<?= e($c['challengeID']) ?>"><?= icon('edit') ?> Edit</a>
                     <form method="post" data-confirm="Delete <?= e($c['title']) ?>?">
+                        <?= csrf_field() ?>
                         <input type="hidden" name="action" value="delete">
                         <input type="hidden" name="challengeID" value="<?= e($c['challengeID']) ?>">
                         <button class="btn btn-danger btn-sm"><?= icon('trash') ?> Delete</button>
                     </form>
+                <?php elseif ($c['state'] === 'Ended'): ?>
+                    <form method="post" data-confirm="Give <?= (int) $c['bonus_points'] ?> bonus points to every student who reached <?= e($c['target_kg'] + 0) ?> kg?">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="action" value="award">
+                        <input type="hidden" name="challengeID" value="<?= e($c['challengeID']) ?>">
+                        <button class="btn btn-sun btn-sm"><?= icon('star') ?> Award bonus</button>
+                    </form>
+                    <span class="lock-note"><?= icon('lock') ?> Ended</span>
                 <?php else: ?>
                     <span class="lock-note"><?= icon('lock') ?> Locked after it starts</span>
                 <?php endif; ?>

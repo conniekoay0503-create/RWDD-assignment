@@ -11,9 +11,8 @@ $cash      = db_one($conn, "SELECT COUNT(*) AS n, COALESCE(SUM(cash_value), 0) A
 $fb_new    = db_value($conn, "SELECT COUNT(*) FROM feedback WHERE admin_reply IS NULL");
 $fb_total  = db_value($conn, "SELECT COUNT(*) FROM feedback");
 $vr_new    = db_value($conn, "SELECT COUNT(*) FROM volunteer_request WHERE status = 'pending'");
-$overdue   = db_value($conn, "SELECT COUNT(*) FROM devices
-                              WHERE status IN ('Ready for Collection', 'Pending Consent', 'Return Requested', 'Returned Unrepaired', 'Returned Unclaimed')
-                              AND DATEDIFF(NOW(), status_changed_at) > 7");
+// Overdue = waiting more than 7 days for the owner or for a decision (same rule as every other page, see overdue_sql())
+$overdue   = db_value($conn, "SELECT COUNT(*) FROM devices WHERE " . overdue_sql(array_merge(WAITING_FOR_OWNER, WAITING_FOR_ACTION)));
 $recycle   = db_value($conn, "SELECT COUNT(*) FROM devices WHERE status = 'Awaiting Recycle'");
 
 // ---- At a glance (all time) ----

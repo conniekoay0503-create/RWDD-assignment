@@ -1,4 +1,3 @@
-
 <?php
 // Student header based on the Admin layout.
 
@@ -21,10 +20,6 @@ $nav_active = $student_page === 'device-details.php'
 
 $studentTP = $_SESSION['tp_number'];
 
-if (empty($_SESSION['notifications_csrf'])) {
-    $_SESSION['notifications_csrf'] = bin2hex(random_bytes(32));
-}
-
 $student_unread = (int) db_value(
     $conn,
     "SELECT COUNT(*) FROM notifications
@@ -45,7 +40,37 @@ $student_latest = db_all(
     [$studentTP]
 );
 
-$initial = strtoupper(substr($_SESSION['name'] ?? 'S', 0, 1));
+$initial = mb_strtoupper(mb_substr($_SESSION['name'] ?? 'S', 0, 1));
+
+// Page title, same look as the admin pages: SVG icon on a colour tile + title + one line under it.
+// $actions = optional buttons on the right (HTML).
+function page_head($icon_name, $title, $desc = '', $actions = '')
+{
+    echo '<div class="page-head"><span class="page-icon">' . icon($icon_name) . '</span><div class="page-title">';
+    echo '<h1>' . e($title) . '</h1>';
+    if ($desc !== '') echo '<p class="page-desc">' . e($desc) . '</p>';
+    echo '</div>';
+    if ($actions !== '') echo '<div class="page-actions">' . $actions . '</div>';
+    echo '</div>';
+}
+
+// Friendly message when a list is empty (same as admin)
+function empty_state($icon_name, $text, $action = '')
+{
+    echo '<div class="empty-state">' . icon($icon_name, 'icon-float') . '<p>' . e($text) . '</p>' . $action . '</div>';
+}
+
+// One table row that says "nothing here yet" (so the message sits INSIDE the table, under the headings)
+function empty_row($colspan, $icon_name, $text)
+{
+    echo '<tr><td colspan="' . (int) $colspan . '" class="empty-msg muted">' . icon($icon_name) . ' ' . e($text) . '</td></tr>';
+}
+
+// "Pending Consent" -> "status-pending-consent" (the badge colour class)
+function status_class($status)
+{
+    return 'status-' . strtolower(str_replace(' ', '-', $status));
+}
 ?>
 
 <!DOCTYPE html>
@@ -114,35 +139,6 @@ $initial = strtoupper(substr($_SESSION['name'] ?? 'S', 0, 1));
     <!-- SAME TOPBAR TOOLS AS ADMIN -->
     <div class="topbar-tools">
 
-        <!-- TEXT SIZE -->
-        <div class="text-size" aria-label="Text size">
-            <button
-                type="button"
-                data-text-size="-1"
-                aria-label="Smaller text"
-            >A-</button>
-
-            <span data-text-size-label>100%</span>
-
-            <button
-                type="button"
-                data-text-size="1"
-                aria-label="Larger text"
-            >A+</button>
-        </div>
-
-        <!-- DARK MODE -->
-        <button
-            type="button"
-            class="icon-btn"
-            data-theme-toggle
-            aria-label="Toggle dark mode"
-            title="Dark mode"
-        >
-            <?= icon('moon', 'theme-moon') ?>
-            <?= icon('sun', 'theme-sun') ?>
-        </button>
-
         <!-- NOTIFICATION DROPDOWN -->
         <div class="dropdown">
 
@@ -191,13 +187,10 @@ $initial = strtoupper(substr($_SESSION['name'] ?? 'S', 0, 1));
                                 value="read_all"
                             >
 
-                            <input
-                                type="hidden"
-                                name="csrf_token"
-                                value="<?= e(
-                                    $_SESSION['notifications_csrf']
-                                ) ?>"
-                            >
+                            <?= csrf_field() ?>
+
+                            <!-- "back" = the page the bell was on, so the user stays on that page -->
+                            <input type="hidden" name="back" value="<?= e($student_page) ?>">
 
                             <button
                                 type="submit"
@@ -280,20 +273,10 @@ $initial = strtoupper(substr($_SESSION['name'] ?? 'S', 0, 1));
                     </small>
                 </div>
 
-                <a href="index.php">
-                    <?= icon('home') ?>
-                    Dashboard
-                </a>
-
-                <a href="notifications.php">
-                    <?= icon('bell') ?>
-                    Notifications
-                </a>
-
-                <a href="../index.php">
-                    <?= icon('home') ?>
-                    Public homepage
-                </a>
+                <!-- Same 3 links as the admin, officer and volunteer menus -->
+                <a href="profile.php"><?= icon('user') ?> My profile</a>
+                <a href="notifications.php"><?= icon('bell') ?> Notifications</a>
+                <a href="../index.php"><?= icon('home') ?> Public homepage</a>
             </div>
         </div>
 

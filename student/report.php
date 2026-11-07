@@ -1,4 +1,3 @@
-
 <?php
 require '../config/db.php';
 require '../includes/functions.php';
@@ -22,16 +21,6 @@ $points = db_one($conn, "SELECT
     COALESCE(SUM(CASE WHEN points < 0 THEN -points ELSE 0 END),0) AS spent
     FROM points_transactions WHERE tp_number = ?", 's', [$tp]);
 
-$stats = [
-    'Total Devices' => $devices['total'],
-    'Repaired Devices' => $devices['repaired'],
-    'Recycled Devices' => $devices['recycled'],
-    'Total Weight (kg)' => $devices['weight'],
-    'Points Balance' => $points['balance'],
-    'Points Earned' => $points['earned'],
-    'Points Spent' => $points['spent']
-];
-
 // get status counts, cashback and recent devices
 $statuses = db_all($conn, "SELECT status, COUNT(*) AS total FROM devices
     WHERE submitted_by = ? GROUP BY status ORDER BY status", 's', [$tp]);
@@ -46,58 +35,64 @@ $recent = db_all($conn, "SELECT deviceID, device_name, status, submitted_at
 
 $page_title = 'My Report';
 require '../includes/student_top.php';
+page_head('chart', 'My Report', 'Your personal repair and recycling summary.');
+$max_status = max(1, ...array_map('intval', array_column($statuses, 'total') ?: [0]));
 ?>
 
-<div class="student-page-head">
-    <span class="page-icon">📊</span>
+<h2 class="section-title"><?= icon('device') ?> My devices</h2>
+<section class="stat-grid four">
+    <div class="stat-card row"><span class="stat-icon tint-mint"><?= icon('device') ?></span><div><strong class="stat-value"><?= (int)$devices['total'] ?></strong><span class="stat-title">Devices submitted</span></div></div>
+    <div class="stat-card row"><span class="stat-icon tint-sky"><?= icon('wrench') ?></span><div><strong class="stat-value"><?= (int)$devices['repaired'] ?></strong><span class="stat-title">Repaired</span></div></div>
+    <div class="stat-card row"><span class="stat-icon tint-mint"><?= icon('recycle') ?></span><div><strong class="stat-value"><?= (int)$devices['recycled'] ?></strong><span class="stat-title">Recycled</span></div></div>
+    <div class="stat-card row"><span class="stat-icon tint-mint"><?= icon('leaf') ?></span><div><strong class="stat-value"><?= number_format((float)$devices['weight'], 2) ?><small>kg</small></strong><span class="stat-title">Kept out of landfill</span></div></div>
+</section>
+
+<h2 class="section-title"><?= icon('star') ?> Points &amp; cashback</h2>
+<section class="stat-grid four">
+    <div class="stat-card row"><span class="stat-icon tint-gold"><?= icon('star') ?></span><div><strong class="stat-value"><?= number_format((int)$points['balance']) ?></strong><span class="stat-title">Points balance</span></div></div>
+    <div class="stat-card row"><span class="stat-icon tint-gold"><?= icon('plus') ?></span><div><strong class="stat-value"><?= number_format((int)$points['earned']) ?></strong><span class="stat-title">Points earned</span></div></div>
+    <div class="stat-card row"><span class="stat-icon tint-rose"><?= icon('wallet') ?></span><div><strong class="stat-value"><?= number_format((int)$points['spent']) ?></strong><span class="stat-title">Points spent</span></div></div>
+    <div class="stat-card row"><span class="stat-icon tint-rose"><?= icon('gift') ?></span><div><strong class="stat-value"><?= e(rm($cashback['requested_value'])) ?></strong><span class="stat-title">Cashback requested (<?= (int)$cashback['total_requests'] ?>)</span></div></div>
+</section>
+
+<div class="two-col">
     <div>
-        <span class="student-eyebrow">STUDENT PORTAL</span>
-        <h1>My Report</h1>
-        <p>Your personal recycling and repair summary.</p>
+        <h2 class="section-title"><?= icon('box') ?> Where my devices are now</h2>
+        <!-- Same bars as the admin dashboard "What devices are now" -->
+        <section class="card">
+            <?php if (!$statuses): ?>
+                <?php empty_state('device', 'No devices yet.'); ?>
+            <?php else: ?>
+                <ul class="bar-list">
+                <?php foreach ($statuses as $st): ?>
+                    <li>
+                        <span class="badge <?= e(status_class($st['status'])) ?>"><?= e($st['status']) ?></span>
+                        <span class="bar" aria-hidden="true"><span style="width: <?= round($st['total'] / $max_status * 100) ?>%"></span></span>
+                        <strong><?= (int)$st['total'] ?></strong>
+                    </li>
+                <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
+        </section>
+    </div>
+    <div>
+        <h2 class="section-title"><?= icon('history') ?> Recent devices</h2>
+        <section class="card">
+            <div class="table-wrap"><table>
+                <thead><tr><th>Device</th><th>Status</th><th>Submitted</th></tr></thead>
+                <tbody>
+                <?php if (!$recent) empty_row(3, 'device', 'No devices yet.'); ?>
+                <?php foreach ($recent as $d): ?>
+                    <tr>
+                        <td><a href="device-details.php?id=<?= urlencode($d['deviceID']) ?>"><strong><?= e($d['device_name']) ?></strong></a></td>
+                        <td><span class="badge <?= e(status_class($d['status'])) ?>"><?= e($d['status']) ?></span></td>
+                        <td><?= e(nice_date($d['submitted_at'])) ?></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table></div>
+        </section>
     </div>
 </div>
-
-<section class="card student-panel">
-    <a href="index.php" class="btn">&larr; Back to Dashboard</a>
-    <h2>My Impact</h2>
-    <div class="stat-grid three">
-        <?php foreach ($stats as $name => $value): ?>
-            <div class="stat-card">
-                <strong class="stat-value"><?= number_format((float)$value, $name === 'Total Weight (kg)' ? 2 : 0) ?></strong>
-                <span class="stat-title"><?= e($name) ?></span>
-            </div>
-        <?php endforeach; ?>
-    </div>
-</section>
-
-<section class="card student-panel">
-    <h2>Device Status Summary</h2>
-    <div class="table-wrap"><table>
-        <tr><th>Status</th><th>Total</th></tr>
-        <?php foreach ($statuses as $s): ?>
-            <tr><td><?= e($s['status']) ?></td><td><?= (int)$s['total'] ?></td></tr>
-        <?php endforeach; ?>
-    </table></div>
-</section>
-
-<section class="card student-panel">
-    <h2>Cashback Summary</h2>
-    <p>Total Requests: <?= (int)$cashback['total_requests'] ?></p>
-    <p>Total Cashback Requested: <?= e(rm($cashback['requested_value'])) ?></p>
-</section>
-
-<section class="card student-panel">
-    <h2>Recent Devices</h2>
-    <div class="table-wrap"><table>
-        <tr><th>Device</th><th>Status</th><th>Submitted</th></tr>
-        <?php foreach ($recent as $d): ?>
-            <tr>
-                <td><a href="device-details.php?id=<?= urlencode($d['deviceID']) ?>"><?= e($d['device_name']) ?></a></td>
-                <td><?= e($d['status']) ?></td>
-                <td><?= e(nice_date($d['submitted_at'])) ?></td>
-            </tr>
-        <?php endforeach; ?>
-    </table></div>
-</section>
 
 <?php require '../includes/student_bottom.php'; ?>

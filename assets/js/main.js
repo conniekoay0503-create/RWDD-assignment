@@ -1,85 +1,6 @@
 // main.js: shared JavaScript for every page.
 
-/* === 1. Save preferences (dark mode + text size ===)
-* localStorage keeps a small value in this browser. It can be blocked (e.g. private mode),
-* so every read/write is wrapped in try-catch and the page still works without it
-*/
-/*
-* USER PREFERENCE STORAGE: Functions for saving and retrieving user preferences using browser local storage.
-*/
-function loadPref(key, fallback){
-    try{ // Attempt to retrieve the saved preference
-        var value = localStorage.getItem(key);
-        return value === null ? fallback : value; //Strict Equality Operator: Compare values and data types without type conversion
-    } catch (e) {
-        return fallback;        
-    }
-}
-
-// Save the preference to browser local storage
-function savePref(key, value) {
-    try {
-        localStorage.setItem(key, value); 
-    } catch (e) {
-        // Ignore storage errors to prevent the application from crashing
-    }
-}
-
-//allowed text sizes in %
-var TEXT_SIZES = [90, 100, 110, 125];
-
-// Apply the saved user preferences to the website
-function applyPrefs(){
-    // Retrieve the saved theme or use light mode by default
-    var theme = loadPref('theme', 'light');
-    // Retrieve the saved text size and convert it to a decimal integer
-    var size = parseInt(loadPref('textSize', '100'), 10);
-    // Reset to 100% if the saved text size is not supported
-    if(TEXT_SIZES.indexOf(size) === -1) size = 100;
-
-    // Apply the selected theme to the root HTML element
-    document.documentElement.setAttribute('data-theme', theme);
-    document.documentElement.style.fontSize = size + '%'; //every size in the CSS use rem, so everything scales
-
-    document.querySelectorAll('[data-text-size-label]').forEach(function(label){
-        label.textContent = size + '%';
-    })
-    document.querySelectorAll('[data-theme-toggle]').forEach(function(btn){
-        btn.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false'); // CSS swaps the moon / sun icon
-    });
-}
-applyPrefs();
-
-// Listen for click events across the entire document
-document.addEventListener('click', function (event){
-    var themeBtn = event.target.closest('[data-theme-toggle]');
-    if (themeBtn){
-        // Toggle between light mode and dark mode and save the new preference
-        savePref('theme', loadPref('theme', 'light') === 'dark' ? 'light' : 'dark');
-        applyPrefs();
-    }
-
-    var sizeBtn = event.target.closest('[data-text-size]');
-    if(sizeBtn){
-        // Find the current text size position in the available size list
-        var current = TEXT_SIZES.indexOf(parseInt(loadPref('textSize', '100'), 10));
-        // Use the default 100% text size if the current value is invalid
-        if (current === -1) current = 1;
-        var next = current + parseInt(sizeBtn.getAttribute('data-text-size'), 10);
-        next = Math.max(0, Math.min(TEXT_SIZES.length - 1, next)); //stay inside the list
-        savePref('textSize', TEXT_SIZES[next]);
-        applyPrefs();
-    }
-
-    // Check whether the reset preferences button was clicked
-    if(event.target.closest('[data-reset-prefs]')){
-        savePref('theme', 'light');
-        savePref('textSize', '100');
-        applyPrefs();
-    }
-})
-
-// === 2. Dropdown (notification bell, account menu) ===
+// === 1. Dropdown (notification bell, account menu) ===
 // <button data-dropdown = "panelId"> opens / closes the panel with that id
 function closeDropdowns(except) { // Close all dropdown panels except the specified panel
     // Select all buttons that control dropdown menus, loop through each dropdown button
@@ -118,7 +39,7 @@ document.addEventListener('keydown', function (event){
     }
 })
 
-// ===3. Show / hide password ===
+// ===2. Show / hide password ===
 document.addEventListener('click', function (event) {
     // Find the nearest password visibility toggle button
     var btn = event.target.closest('[data-toggle-password]');
@@ -133,7 +54,7 @@ document.addEventListener('click', function (event) {
     btn.textContent = hidden ? 'Hide' : 'Show';
 });
 
-// ===4. Confirm before a link is followed (pop-up message) ===
+// ===3. Confirm before a link is followed (pop-up message) ===
 document.addEventListener('click', function (event){
     var link = event.target.closest('a[data-confirm]');
     // Check whether the user cancels the confirmation dialog
@@ -143,7 +64,7 @@ document.addEventListener('click', function (event){
     }
 })
 
-// === 5. Form validation (forms with data-validate) ===
+// === 4. Form validation (forms with data-validate) ===
 // The server (PHP) always checks again - this only gives faster feedback
 // Check user input and return an error message if the input is invalid.
 // Get the label text of a field, e.g. "Bonus points".
@@ -306,7 +227,7 @@ document.addEventListener('submit', function (event) {
     }
 });
 
-/* ===6. Password strength meter === */
+/* ===5. Password strength meter === */
 // Evaluate password strength by checking its length and character combinations, then return a score from 0 to 5.
 function passwordScore(pw) {
     // Initialize the password strength score to zero
@@ -343,7 +264,7 @@ document.addEventListener('input', function (event) { //Listen for input change 
     if (text) text.textContent = input.value === '' ? 'At least 8 characters' : (input.value.length < 8 ? words[0] : words[score]);
 });
 
-/* ==== 7. Search filters === */
+/* ==== 6. Search filters === */
 // 7a. Table: text search + role dropdown (data-filter-table / data-filter-role)
 function filterTable(tableId) {
     // Get the table element using its ID.
@@ -404,7 +325,7 @@ document.addEventListener('change', function (event) {
     if (event.target.hasAttribute('data-filter-role')) filterTable(event.target.getAttribute('data-filter-role'));
 });
 
-/* === 8. Show more / show less === */
+/* === 7. Show more / show less === */
 // A list with data-show-limit="5" shows 5 items; "Show more" adds 5 more each click.
 function applyShowLimit(list) {
     // Store the maximum number of items to display.
@@ -452,7 +373,7 @@ document.addEventListener('click', function (event) {
     applyShowLimit(list);
 });
 
-/* === 9. Points calculator (Categories > Points calculator) === */
+/* === 8. Points calculator (Categories > Points calculator) === */
 function updateCalculator() {
     var box = document.querySelector('[data-calculator]');
     // Stop execution if the calculator container does not exist.
@@ -467,12 +388,14 @@ function updateCalculator() {
     var max = parseInt(option.getAttribute('data-max'), 10);
     var weight = parseFloat(box.querySelector('[data-calc-weight]').value) || 0;
 
-    // Apply the same calculation rule as the server.
+    // Apply the same calculation rule as the server: calc_points() in includes/functions.php.
     // Same rule as the server: MIN(weight x multiplier (x2 if repaired), max), rounded down
+    // Round to 2 decimals first: 0.29 * 100 is stored as 28.999999..., and floor() alone would give 28.
+    function roundDown(raw) { return Math.floor(Math.round(raw * 100) / 100); }
     // Calculate recycled points (student recycled + volunteer) without doubling the multiplier.
-    var base = Math.floor(weight * multiplier);
+    var base = roundDown(weight * multiplier);
     // Repaired student gets double.
-    var double = Math.floor(weight * multiplier * 2);
+    var double = roundDown(weight * multiplier * 2);
 
     box.querySelector('[data-calc-rule]').textContent =
         weight + ' kg × ' + multiplier + ' = ' + base + ' points (max ' + max + ' per device)';
@@ -507,7 +430,7 @@ document.addEventListener('change', function (event) {
 });
 updateCalculator();
 
-/* === 10. Tabs (Profile page) === */
+/* === 9. Tabs (Profile page) === */
 function openTab(name) {
     // Find the main container that holds the tabs.
     var tabs = document.querySelector('[data-tabs]');
@@ -546,7 +469,7 @@ document.addEventListener('click', function (event) {
     history.replaceState(null, '', '#' + btn.getAttribute('data-tab'));
 });
 
-/* === 11. Small helpers === */
+/* === 10. Small helpers === */
 // Print button (Reports page)
 document.addEventListener('click', function (event) {
     // Check whether the clicked element belongs to a print button.
@@ -601,7 +524,7 @@ if (reportForm) {
     updatePeriod();
 }
 
-/* === 12. Error messages from PHP in a pop-up === */
+/* === 11. Error messages from PHP in a pop-up === */
 // set_flash('error', ...) is printed as <div data-flash="error">. Show it with alert() too.
 // We wait for the page to finish loading (and 100 ms more), so the page is drawn behind the pop-up.
 // Success messages (green box) stay on the page only, so the user does not have to press OK every time.

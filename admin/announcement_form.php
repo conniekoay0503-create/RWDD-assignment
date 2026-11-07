@@ -13,8 +13,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $message = trim($_POST['message'] ?? '');
 
     $errors = [];
-    if ($title === '' || strlen($title) > 100)     $errors[] = 'Title is required (max 100 characters).';
-    if ($message === '' || strlen($message) > 500) $errors[] = 'Message is required (max 500 characters).';
+    if ($title === '' || mb_strlen($title) > 100)     $errors[] = 'Title is required (max 100 characters).';
+    if ($message === '' || mb_strlen($message) > 500) $errors[] = 'Message is required (max 500 characters).';
     if ($errors) {
         foreach ($errors as $err) set_flash('error', $err);
         $_SESSION['old'] = $_POST;
@@ -46,6 +46,7 @@ page_head($edit ? 'edit' : 'megaphone', $edit ? 'Edit announcement' : 'Post an a
 <section class="card narrow">
     <form method="post" novalidate data-validate
           data-confirm="<?= $edit ? 'Save the changes to this announcement?' : 'Post this announcement? Everyone will see it.' ?>">
+        <?= csrf_field() ?>
         <input type="hidden" name="announcementID" value="<?= e($edit['announcementID'] ?? '') ?>">
         <div class="field">
             <label for="an_title"><?= icon('type') ?> Title</label>

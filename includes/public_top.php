@@ -14,12 +14,6 @@
 <header class="land-nav">
     <a class="brand" href="index.php"><span class="brand-mark"><?= icon('recycle', 'icon-spin-hover') ?></span><span class="brand-text">E-Waste &amp; Repair Café</span></a>
     <div class="land-actions">
-        <div class="text-size" aria-label="Text size">
-            <button type="button" data-text-size="-1" aria-label="Smaller text">A-</button>
-            <span data-text-size-label>100%</span>
-            <button type="button" data-text-size="1" aria-label="Larger text">A+</button>
-        </div>
-        <button type="button" class="icon-btn" data-theme-toggle aria-label="Toggle dark mode" title="Dark mode"><?= icon('moon', 'theme-moon') ?><?= icon('sun', 'theme-sun') ?></button>
         <?php if ($page_title === 'Log In'): ?>
             <a class="btn btn-primary" href="register.php"><?= icon('user-plus') ?> Sign up</a>
         <?php else: ?>
