@@ -79,7 +79,9 @@ assets/js/main.js         All JavaScript for the whole website
 assets/img/               SVG pictures for the homepage
 uploads/devices/          Device photos uploaded by students
 database/ewaste_repair_cafe.sql   Tables + demo data
+
 database/volunteer_extra_test_data.sql   Optional: 2 more volunteers, so the leaderboard has more rows
+
 ```
 
 Every page inside `admin/`, `student/`, `officer/` and `volunteer/` starts with the same 3 lines. Keep them:

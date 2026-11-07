@@ -250,6 +250,15 @@ function officer_page_head(
 
                 <div class="dropdown-head">
                     <strong>Notifications</strong>
+                    <?php if ($unread): ?>
+                        <form method="post" action="notifications.php">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="action" value="read_all">
+                            <!-- "back" = the page the bell was on, so the user stays on that page -->
+                            <input type="hidden" name="back" value="<?= e($this_page) ?>">
+                            <button class="link-btn"><?= icon('check') ?> Mark all as read</button>
+                        </form>
+                    <?php endif; ?>
                 </div>
 
                 <ul class="notif-list">

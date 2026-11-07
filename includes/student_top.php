@@ -159,6 +159,9 @@ $initial = mb_strtoupper(mb_substr($_SESSION['name'] ?? 'S', 0, 1));
 
                             <?= csrf_field() ?>
 
+                            <!-- "back" = the page the bell was on, so the user stays on that page -->
+                            <input type="hidden" name="back" value="<?= e($student_page) ?>">
+
                             <button
                                 type="submit"
                                 class="link-btn"

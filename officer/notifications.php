@@ -35,7 +35,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         set_flash('success', 'Notifications updated.');
-        redirect('notifications.php');
+        // Go back to the page the bell was on. Only our own page names are allowed (no open redirect).
+        $back = $_POST['back'] ?? 'notifications.php';
+        if (!is_string($back) || !preg_match('/^[a-z_]+\.php$/', $back)) $back = 'notifications.php';
+        redirect($back);
     } catch (Throwable $e) {
         error_log($e->getMessage());
         $error = 'Unable to update notifications.';
@@ -93,7 +96,7 @@ require '../includes/officer_top.php';
                 <?= csrf_field() ?>
                 <input type="hidden" name="action" value="read_all">
                 <button class="btn btn-outline" type="submit">
-                    <?= icon('check') ?> Mark All as Read
+                    <?= icon('check') ?> Mark all as read
                 </button>
             </form>
         <?php endif; ?>

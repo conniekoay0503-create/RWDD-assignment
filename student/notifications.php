@@ -21,7 +21,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             WHERE tp_number = ?", 's', [$tp]);
 
         set_flash('success', 'All notifications marked as read.');
-        redirect('notifications.php');
+        // Go back to the page the bell was on. Only our own page names are allowed (no open redirect).
+        $back = $_POST['back'] ?? 'notifications.php';
+        if (!is_string($back) || !preg_match('/^[a-z-]+\.php$/', $back)) $back = 'notifications.php';
+        redirect($back);
     } elseif ($action === 'read_one' && preg_match('/^N[0-9]{3,9}$/', $id)) {
         db_exec($conn, "UPDATE notifications SET is_read = 1
             WHERE notificationID = ? AND tp_number = ?", 'ss', [$id, $tp]);
@@ -74,7 +77,7 @@ require '../includes/student_top.php';
         <form method="post">
             <?= csrf_field() ?>
             <input type="hidden" name="action" value="read_all">
-            <button class="btn btn-outline btn-sm">Mark All as Read</button>
+            <button class="btn btn-outline btn-sm"><?= icon('check') ?> Mark all as read</button>
         </form>
     <?php endif; ?>
 
