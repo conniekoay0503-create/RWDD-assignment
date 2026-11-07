@@ -84,7 +84,10 @@ require '../includes/period_form.php';   // the same period box as the admin Rep
 ?>
 
 <?php if ($rp['previewing']): ?>
-<p class="report-period" id="report"><?= icon('calendar') ?> Showing <strong><?= e($rp['label']) ?></strong></p>
+<?php
+$report_title = 'Recycling statistics report';
+require '../includes/report_head.php';   // same report top as the admin Reports page
+?>
 
 <section class="stat-grid four">
     <?php
@@ -97,12 +100,15 @@ require '../includes/period_form.php';   // the same period box as the admin Rep
     ?>
 
     <?php foreach ($cards as [$iconName, $tint, $value, $label]): ?>
-        <div class="stat-card">
+        <!-- "row" = icon on the left, number + title on the right (same as the admin report) -->
+        <div class="stat-card row">
             <span class="stat-icon <?= $tint ?>">
                 <?= icon($iconName) ?>
             </span>
-            <strong class="stat-value"><?= e($value) ?></strong>
-            <span class="stat-title"><?= e($label) ?></span>
+            <div>
+                <strong class="stat-value"><?= e($value) ?></strong>
+                <span class="stat-title"><?= e($label) ?></span>
+            </div>
         </div>
     <?php endforeach; ?>
 </section>
@@ -110,9 +116,9 @@ require '../includes/period_form.php';   // the same period box as the admin Rep
 <div class="two-col">
 
     <section class="card">
-        <h2 class="card-title">
+        <h3 class="card-title">
             <?= icon('chart') ?> Recycling by Category
-        </h2>
+        </h3>
 
         <?php if (!$categories || (int)$stats['devices'] === 0): ?>
             <p class="muted">No devices were recycled in this period.</p>
@@ -132,9 +138,9 @@ require '../includes/period_form.php';   // the same period box as the admin Rep
     </section>
 
     <section class="card">
-        <h2 class="card-title">
+        <h3 class="card-title">
             <?= icon('calendar') ?> Monthly Recycling
-        </h2>
+        </h3>
 
         <?php if (!$monthly): ?>
             <p class="muted">No devices were recycled in this period.</p>
@@ -157,9 +163,9 @@ require '../includes/period_form.php';   // the same period box as the admin Rep
 
 <section class="card">
     <div class="card-head">
-        <h2 class="card-title">
+        <h3 class="card-title">
             <?= icon('list') ?> Category Details
-        </h2>
+        </h3>
     </div>
 
     <div class="table-wrap">
@@ -173,6 +179,7 @@ require '../includes/period_form.php';   // the same period box as the admin Rep
                 </tr>
             </thead>
             <tbody>
+                <?php if (!$categories) empty_row(4, 'recycle', 'No devices were recycled in this period.'); ?>
                 <?php foreach ($categories as $c): ?>
                     <tr>
                         <td><?= e($c['category_name']) ?></td>
@@ -189,6 +196,7 @@ require '../includes/period_form.php';   // the same period box as the admin Rep
         </table>
     </div>
 </section>
+</article>
 
 <?php endif; ?>
 

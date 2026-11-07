@@ -47,9 +47,12 @@ require '../includes/period_form.php';   // the same period box as the admin Rep
 ?>
 
 <?php if ($rp['previewing']): ?>
-<p class="report-period" id="report"><?= icon('calendar') ?> Showing <strong><?= e($rp['label']) ?></strong></p>
+<?php
+$report_title = 'My repair & recycling report';
+require '../includes/report_head.php';   // same report top as the admin Reports page
+?>
 
-<h2 class="section-title"><?= icon('device') ?> My devices</h2>
+<h3 class="section-title"><?= icon('device') ?> My devices</h3>
 <section class="stat-grid four">
     <div class="stat-card row"><span class="stat-icon tint-mint"><?= icon('device') ?></span><div><strong class="stat-value"><?= (int)$devices['total'] ?></strong><span class="stat-title">Devices submitted</span></div></div>
     <div class="stat-card row"><span class="stat-icon tint-sky"><?= icon('wrench') ?></span><div><strong class="stat-value"><?= (int)$devices['repaired'] ?></strong><span class="stat-title">Repaired</span></div></div>
@@ -57,7 +60,7 @@ require '../includes/period_form.php';   // the same period box as the admin Rep
     <div class="stat-card row"><span class="stat-icon tint-mint"><?= icon('leaf') ?></span><div><strong class="stat-value"><?= number_format((float)$devices['weight'], 2) ?><small>kg</small></strong><span class="stat-title">Kept out of landfill</span></div></div>
 </section>
 
-<h2 class="section-title"><?= icon('star') ?> Points &amp; cashback</h2>
+<h3 class="section-title"><?= icon('star') ?> Points &amp; cashback</h3>
 <section class="stat-grid four">
     <div class="stat-card row"><span class="stat-icon tint-gold"><?= icon('star') ?></span><div><strong class="stat-value"><?= number_format((int)$points['balance']) ?></strong><span class="stat-title">Points balance (now)</span></div></div>
     <div class="stat-card row"><span class="stat-icon tint-gold"><?= icon('plus') ?></span><div><strong class="stat-value"><?= number_format((int)$points['earned']) ?></strong><span class="stat-title">Points earned in this period</span></div></div>
@@ -67,7 +70,7 @@ require '../includes/period_form.php';   // the same period box as the admin Rep
 
 <div class="two-col">
     <div>
-        <h2 class="section-title"><?= icon('box') ?> Where my devices are now</h2>
+        <h3 class="section-title"><?= icon('box') ?> Where my devices are now</h3>
         <!-- Same bars as the admin dashboard "What devices are now" -->
         <section class="card">
             <?php if (!$statuses): ?>
@@ -86,7 +89,7 @@ require '../includes/period_form.php';   // the same period box as the admin Rep
         </section>
     </div>
     <div>
-        <h2 class="section-title"><?= icon('history') ?> Recent devices</h2>
+        <h3 class="section-title"><?= icon('history') ?> Recent devices</h3>
         <section class="card">
             <div class="table-wrap"><table>
                 <thead><tr><th>Device</th><th>Status</th><th>Submitted</th></tr></thead>
@@ -104,6 +107,7 @@ require '../includes/period_form.php';   // the same period box as the admin Rep
         </section>
     </div>
 </div>
+</article>
 
 <?php endif; ?>
 

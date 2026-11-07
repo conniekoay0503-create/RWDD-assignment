@@ -57,35 +57,30 @@ require '../includes/period_form.php';   // the same period box as the admin Rep
 
 <?php if ($rp['previewing']): ?>
 
-<section class="card report">
-    <div class="report-head">
-        <div>
-            <h2><?= icon('chart') ?> Volunteer repair report</h2>
-            <p><?= e($label) ?> · <?= e($_SESSION['name']) ?> (<?= e($me) ?>)</p>
-        </div>
-        <div>
-            <small class="muted">Report <?= e($code) ?> · generated <?= e(date('j M Y, g:i A')) ?></small>
-            <button type="button" class="btn btn-outline btn-sm no-print" data-print><?= icon('printer') ?> Print / Save as PDF</button>
-        </div>
-    </div>
+<?php
+$report_title = 'Volunteer repair report';
+$report_code = $code;   // shown after the date, e.g. VOL-20260101-20261231
+require '../includes/report_head.php';   // same report top as the admin Reports page
+?>
 
-    <div class="stat-grid four">
-        <div class="stat-card"><span class="stat-value"><?= $stats['claimed'] ?></span><span class="stat-title">Devices claimed</span></div>
-        <div class="stat-card"><span class="stat-value"><?= $stats['fixed'] ?></span><span class="stat-title">Repaired</span></div>
-        <div class="stat-card"><span class="stat-value"><?= $stats['recycled'] ?></span><span class="stat-title">Recycled</span></div>
-        <div class="stat-card"><span class="stat-value"><?= $stats['rate'] === null ? '–' : (int) $stats['rate'] . '<small>%</small>' ?></span><span class="stat-title">Success rate</span></div>
-        <div class="stat-card"><span class="stat-value"><?= e(vol_kg_number($stats['kg'])) ?><small>kg</small></span><span class="stat-title">Kg handled</span></div>
-        <div class="stat-card"><span class="stat-value"><?= $earned ?></span><span class="stat-title">Points earned</span></div>
-        <div class="stat-card"><span class="stat-value"><?= $redeemed ?></span><span class="stat-title">Points redeemed</span></div>
-    </div>
+    <section class="stat-grid four">
+        <div class="stat-card row"><span class="stat-icon tint-sky"><?= icon('device') ?></span><div><strong class="stat-value"><?= $stats['claimed'] ?></strong><span class="stat-title">Devices claimed</span></div></div>
+        <div class="stat-card row"><span class="stat-icon tint-mint"><?= icon('wrench') ?></span><div><strong class="stat-value"><?= $stats['fixed'] ?></strong><span class="stat-title">Repaired</span></div></div>
+        <div class="stat-card row"><span class="stat-icon tint-mint"><?= icon('recycle') ?></span><div><strong class="stat-value"><?= $stats['recycled'] ?></strong><span class="stat-title">Recycled</span></div></div>
+        <div class="stat-card row"><span class="stat-icon tint-gold"><?= icon('check') ?></span><div><strong class="stat-value"><?= $stats['rate'] === null ? '–' : (int) $stats['rate'] . '<small>%</small>' ?></strong><span class="stat-title">Success rate</span></div></div>
+    </section>
+    <section class="stat-grid three">
+        <div class="stat-card row"><span class="stat-icon tint-mint"><?= icon('leaf') ?></span><div><strong class="stat-value"><?= e(vol_kg_number($stats['kg'])) ?><small>kg</small></strong><span class="stat-title">Kg handled</span></div></div>
+        <div class="stat-card row"><span class="stat-icon tint-gold"><?= icon('star') ?></span><div><strong class="stat-value"><?= $earned ?></strong><span class="stat-title">Points earned</span></div></div>
+        <div class="stat-card row"><span class="stat-icon tint-rose"><?= icon('wallet') ?></span><div><strong class="stat-value"><?= $redeemed ?></strong><span class="stat-title">Points redeemed</span></div></div>
+    </section>
 
-    <h3>Devices handled in this period</h3>
-    <?php if (!$devices): ?>
-        <p class="muted">No devices were claimed in this period.</p>
-    <?php else: ?>
-        <div class="table-wrap"><table class="table">
+    <section class="card">
+        <h3 class="card-title"><?= icon('box') ?> Devices handled in this period</h3>
+        <div class="table-wrap"><table>
             <thead><tr><th>Device</th><th>Category</th><th>Claimed</th><th>Status now</th><th>Weight</th><th class="v-num">Points</th></tr></thead>
             <tbody>
+            <?php if (!$devices) empty_row(6, 'device', 'No devices were claimed in this period.'); ?>
             <?php foreach ($devices as $d): ?>
                 <tr>
                     <td><strong><?= e($d['device_name']) ?></strong><br><small class="muted"><?= e($d['deviceID']) ?></small></td>
@@ -98,15 +93,14 @@ require '../includes/period_form.php';   // the same period box as the admin Rep
             <?php endforeach; ?>
             </tbody>
         </table></div>
-    <?php endif; ?>
+    </section>
 
-    <h3>Points history</h3>
-    <?php if (!$ledger): ?>
-        <p class="muted">No points movements in this period.</p>
-    <?php else: ?>
-        <div class="table-wrap"><table class="table">
+    <section class="card">
+        <h3 class="card-title"><?= icon('star') ?> Points history</h3>
+        <div class="table-wrap"><table>
             <thead><tr><th>Date</th><th>Description</th><th>Type</th><th class="v-num">Points</th></tr></thead>
             <tbody>
+            <?php if (!$ledger) empty_row(4, 'star', 'No points movements in this period.'); ?>
             <?php foreach ($ledger as $l): $pts = (int) $l['points']; ?>
                 <tr>
                     <td><?= e(nice_date($l['created_at'])) ?></td>
@@ -117,8 +111,8 @@ require '../includes/period_form.php';   // the same period box as the admin Rep
             <?php endforeach; ?>
             </tbody>
         </table></div>
-    <?php endif; ?>
-</section>
+    </section>
+</article>
 
 <?php endif; ?>
 

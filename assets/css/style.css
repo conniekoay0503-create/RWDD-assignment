@@ -978,9 +978,6 @@ tr.is-me td { background: var(--primary-soft); }
     .student-app .brand-text { font-size: .88rem; }
 }
 
-/* "Showing November 2026" line above a report (student / officer) */
-.report-period { display: flex; align-items: center; gap: 0.4rem; margin: 0 0 1rem; color: var(--muted); }
-.report-period .icon { color: var(--primary); }
 
 /* Officer "Abandoned devices": two actions in one cell, each = [list][button] on one line, buttons the same width */
 .action-forms { min-width: 22rem; }

@@ -82,15 +82,10 @@ require '../includes/period_form.php';
 
 <?php if ($previewing): ?>
 <!-- The white "paper" below is exactly what gets printed / saved as PDF -->
-<p class="print-area-label no-print"><?= icon('printer') ?> Print area: only the white part below is printed or saved as PDF.</p>
-<article class="report" id="report">
-    <header class="report-head">
-        <div>
-            <h2><?= icon('chart') ?> E-Waste &amp; Repair Café report</h2>
-            <p><strong><?= e($period_label) ?></strong> · generated <?= date('j M Y, g:i A') ?> by <?= e($_SESSION['name']) ?></p>
-        </div>
-        <button type="button" class="btn btn-sun no-print" data-print><?= icon('printer') ?> Print / Save as PDF</button>
-    </header>
+<?php
+$report_title = 'E-Waste & Repair Café report';
+require '../includes/report_head.php';   // same report top as the student, officer and volunteer reports
+?>
 
     <section class="stat-grid four">
         <div class="stat-card row"><span class="stat-icon tint-sky"><?= icon('device') ?></span><div><strong class="stat-value"><?= (int) $summary['submitted'] ?></strong><span class="stat-title">Devices submitted</span></div></div>
