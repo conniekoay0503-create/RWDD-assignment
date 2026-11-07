@@ -26,8 +26,6 @@ Built with plain PHP 8 (mysqli), MySQL / MariaDB, HTML, CSS and JavaScript. No f
 
 If your MySQL has a password or does not use port 3306, change `config/db.php`.
 
-**Optional:** to see a longer volunteer leaderboard, also run `database/volunteer_extra_test_data.sql` in the **SQL** tab after the import.
-
 **Importing again:** the SQL file does not delete old tables. To reset the demo data, drop all tables in `ewaste_repair_cafe` first (select all tables, then **Drop**), then import again.
 
 ## 2. Demo accounts
@@ -79,9 +77,6 @@ assets/js/main.js         All JavaScript for the whole website
 assets/img/               SVG pictures for the homepage
 uploads/devices/          Device photos uploaded by students
 database/ewaste_repair_cafe.sql   Tables + demo data
-
-database/volunteer_extra_test_data.sql   Optional: 2 more volunteers, so the leaderboard has more rows
-
 ```
 
 Every page inside `admin/`, `student/`, `officer/` and `volunteer/` starts with the same 3 lines. Keep them:

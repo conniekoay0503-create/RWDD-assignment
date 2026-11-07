@@ -41,6 +41,36 @@ $student_latest = db_all(
 );
 
 $initial = mb_strtoupper(mb_substr($_SESSION['name'] ?? 'S', 0, 1));
+
+// Page title, same look as the admin pages: SVG icon on a colour tile + title + one line under it.
+// $actions = optional buttons on the right (HTML).
+function page_head($icon_name, $title, $desc = '', $actions = '')
+{
+    echo '<div class="page-head"><span class="page-icon">' . icon($icon_name) . '</span><div class="page-title">';
+    echo '<h1>' . e($title) . '</h1>';
+    if ($desc !== '') echo '<p class="page-desc">' . e($desc) . '</p>';
+    echo '</div>';
+    if ($actions !== '') echo '<div class="page-actions">' . $actions . '</div>';
+    echo '</div>';
+}
+
+// Friendly message when a list is empty (same as admin)
+function empty_state($icon_name, $text, $action = '')
+{
+    echo '<div class="empty-state">' . icon($icon_name, 'icon-float') . '<p>' . e($text) . '</p>' . $action . '</div>';
+}
+
+// One table row that says "nothing here yet" (so the message sits INSIDE the table, under the headings)
+function empty_row($colspan, $icon_name, $text)
+{
+    echo '<tr><td colspan="' . (int) $colspan . '" class="empty-msg muted">' . icon($icon_name) . ' ' . e($text) . '</td></tr>';
+}
+
+// "Pending Consent" -> "status-pending-consent" (the badge colour class)
+function status_class($status)
+{
+    return 'status-' . strtolower(str_replace(' ', '-', $status));
+}
 ?>
 
 <!DOCTYPE html>

@@ -50,81 +50,68 @@ $announcements = db_all($conn, "SELECT a.*, u.name AS admin_name
 
 $page_title = 'Notifications';
 require '../includes/student_top.php';
+page_head('bell', 'Notifications', 'Updates about your devices, points and campus news.');
 ?>
 
-<div class="student-page-head">
-    <span class="page-icon">🔔</span>
+<?php if ($error): ?>
+    <div class="alert alert-error" role="alert" data-flash="error"><?= icon('alert') ?><span><?= e($error) ?></span></div>
+<?php endif; ?>
+
+<div class="two-col">
     <div>
-        <h1>Notifications</h1>
-        <p>Stay updated on your devices and campus activities.</p>
-    </div>
-</div>
-
-<section class="card student-panel">
-    <div class="card-head">
-        <h2>My Notifications</h2>
-        <nav class="pill-tabs">
-            <a href="notifications.php" class="<?= $filter === 'all' ? 'active' : '' ?>">All</a>
-            <a href="notifications.php?filter=unread" class="<?= $filter === 'unread' ? 'active' : '' ?>">
-                Unread (<?= $unread ?>)
-            </a>
-        </nav>
-    </div>
-
-    <?php if ($error): ?><p class="alert alert-error"><?= e($error) ?></p><?php endif; ?>
-
-    <?php if ($unread > 0): ?>
-        <form method="post">
-            <?= csrf_field() ?>
-            <input type="hidden" name="action" value="read_all">
-            <button class="btn btn-outline btn-sm"><?= icon('check') ?> Mark all as read</button>
-        </form>
-    <?php endif; ?>
-
-    <?php if (!$notifications): ?><p>No notifications to display.</p><?php endif; ?>
-
-    <?php if ($notifications): ?>
-        <ul class="notif-list full">
-        <?php foreach ($notifications as $n): ?>
-            <li class="<?= $n['is_read'] ? '' : 'unread' ?>">
-                <div>
-                    <strong><?= e($n['title']) ?></strong>
-                    <span><?= e($n['message']) ?></span>
-                    <small class="muted"><?= e(nice_date($n['created_at'], true)) ?></small>
-                </div>
-                <?php if (!$n['is_read']): ?>
+        <h2 class="section-title"><?= icon('bell') ?> My notifications</h2>
+        <!-- Same layout as the admin Notifications page -->
+        <section class="card">
+            <div class="card-head">
+                <nav class="pill-tabs" aria-label="Filter notifications">
+                    <a href="notifications.php" class="<?= $filter === 'all' ? 'active' : '' ?>"><?= icon('inbox') ?> All</a>
+                    <a href="notifications.php?filter=unread" class="<?= $filter === 'unread' ? 'active' : '' ?>"><?= icon('bell') ?> Unread · <?= (int)$unread ?></a>
+                </nav>
+                <?php if ($unread > 0): ?>
                     <form method="post">
                         <?= csrf_field() ?>
-                        <input type="hidden" name="action" value="read_one">
-                        <input type="hidden" name="notificationID" value="<?= e($n['notificationID']) ?>">
-                        <button class="btn btn-outline btn-sm">Mark as Read</button>
+                        <input type="hidden" name="action" value="read_all">
+                        <button class="btn btn-outline btn-sm"><?= icon('check') ?> Mark all as read</button>
                     </form>
                 <?php endif; ?>
-            </li>
-        <?php endforeach; ?>
-        </ul>
-    <?php endif; ?>
-</section>
+            </div>
+            <ul class="notif-list full">
+            <?php foreach ($notifications as $n): ?>
+                <li class="<?= $n['is_read'] ? '' : 'unread' ?>">
+                    <div>
+                        <strong><?= e($n['title']) ?></strong>
+                        <span><?= e($n['message']) ?></span>
+                        <small class="muted"><?= e(nice_date($n['created_at'], true)) ?></small>
+                    </div>
+                    <?php if (!$n['is_read']): ?>
+                        <form method="post">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="action" value="read_one">
+                            <input type="hidden" name="notificationID" value="<?= e($n['notificationID']) ?>">
+                            <button class="btn-icon" title="Mark as read" aria-label="Mark as read"><?= icon('check') ?></button>
+                        </form>
+                    <?php endif; ?>
+                </li>
+            <?php endforeach; ?>
+            </ul>
+            <?php if (!$notifications) empty_state('bell', 'Nothing here.'); ?>
+        </section>
+    </div>
 
-<section class="card student-panel">
-    <h2>Campus Announcements</h2>
-    <?php if (!$announcements): ?><p>No announcements available.</p><?php endif; ?>
-
-    <?php if ($announcements): ?>
-        <ul class="notif-list full">
+    <div>
+        <h2 class="section-title"><?= icon('megaphone') ?> Campus announcements</h2>
+        <?php if (!$announcements): ?>
+            <section class="card"><?php empty_state('megaphone', 'No announcements yet.'); ?></section>
+        <?php endif; ?>
         <?php foreach ($announcements as $a): ?>
-            <li>
-                <div>
-                    <strong><?= e($a['title']) ?></strong>
-                    <span><?= e($a['message']) ?></span>
-                    <small class="muted">
-                        <?= e($a['admin_name']) ?> · <?= e(nice_date($a['created_at'], true)) ?>
-                    </small>
-                </div>
-            </li>
+            <article class="post-card stacked">
+                <time datetime="<?= e(date('Y-m-d', strtotime($a['created_at']))) ?>"><?= icon('calendar') ?> <?= e(nice_date($a['created_at'])) ?></time>
+                <h2><?= e($a['title']) ?></h2>
+                <p><?= nl2br(e($a['message'])) ?></p>
+                <footer><small class="muted"><?= icon('user') ?> <?= e($a['admin_name']) ?></small></footer>
+            </article>
         <?php endforeach; ?>
-        </ul>
-    <?php endif; ?>
-</section>
+    </div>
+</div>
 
 <?php require '../includes/student_bottom.php'; ?>
