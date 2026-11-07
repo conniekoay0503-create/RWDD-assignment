@@ -273,20 +273,10 @@ function status_class($status)
                     </small>
                 </div>
 
-                <a href="index.php">
-                    <?= icon('home') ?>
-                    Dashboard
-                </a>
-
-                <a href="notifications.php">
-                    <?= icon('bell') ?>
-                    Notifications
-                </a>
-
-                <a href="../index.php">
-                    <?= icon('home') ?>
-                    Public homepage
-                </a>
+                <!-- Same 3 links as the admin, officer and volunteer menus -->
+                <a href="profile.php"><?= icon('user') ?> My profile</a>
+                <a href="notifications.php"><?= icon('bell') ?> Notifications</a>
+                <a href="../index.php"><?= icon('home') ?> Public homepage</a>
             </div>
         </div>
 
