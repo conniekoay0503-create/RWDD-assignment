@@ -3,13 +3,19 @@ require '../config/db.php';
 require '../includes/functions.php';
 require_role($conn, 'officer', '../');
 
+// The period from the form (same box as the admin Reports page).
+// "Recycled in the period" = the date it became Recycled (status_changed_at). Every query: date >= start AND date < end
+$rp = report_period();
+$p = [$rp['start'], $rp['end']];
+
 // Overall recycling statistics
 $stats = db_one($conn, "
     SELECT COUNT(*) AS devices,
            COALESCE(SUM(weight_kg), 0) AS weight
     FROM devices
     WHERE status = 'Recycled'
-");
+      AND status_changed_at >= ? AND status_changed_at < ?
+", 'ss', $p);
 
 $points = (int) db_value($conn, "
     SELECT COALESCE(SUM(p.points), 0)
@@ -17,15 +23,17 @@ $points = (int) db_value($conn, "
     JOIN devices d ON p.deviceID = d.deviceID
     WHERE d.status = 'Recycled'
       AND p.txn_type = 'earn'
-      AND p.description LIKE 'Recycling reward for device %'
-");
+      AND p.tp_number = d.submitted_by   -- the owner's points for this recycled device
+      AND d.status_changed_at >= ? AND d.status_changed_at < ?
+", 'ss', $p);
 
 $officers = (int) db_value($conn, "
     SELECT COUNT(DISTINCT processed_by)
     FROM devices
     WHERE status = 'Recycled'
       AND processed_by IS NOT NULL
-");
+      AND status_changed_at >= ? AND status_changed_at < ?
+", 'ss', $p);
 
 // Category breakdown
 $categories = db_all($conn, "
@@ -36,9 +44,10 @@ $categories = db_all($conn, "
     LEFT JOIN devices d
       ON d.categoryID = c.categoryID
      AND d.status = 'Recycled'
+     AND d.status_changed_at >= ? AND d.status_changed_at < ?
     GROUP BY c.categoryID, c.category_name
     ORDER BY total DESC
-");
+", 'ss', $p);
 
 // Monthly recycling trends
 $monthly = db_all($conn, "
@@ -47,19 +56,17 @@ $monthly = db_all($conn, "
            COALESCE(SUM(weight_kg), 0) AS weight
     FROM devices
     WHERE status = 'Recycled'
-      AND status_changed_at IS NOT NULL
+      AND status_changed_at >= ? AND status_changed_at < ?
     GROUP BY DATE_FORMAT(status_changed_at, '%Y-%m')
     ORDER BY month DESC
-    LIMIT 6
-");
+    LIMIT 12
+", 'ss', $p);
 
-$maxCategory = max(1, ...array_map(
-    fn($c) => (int)$c['total'], $categories
-));
+// array_merge([1], ...) so max() still works when the list is empty (a period with no recycling)
+$maxCategory = max(array_merge([1], array_map(fn($c) => (int)$c['total'], $categories)));
 
-$maxMonth = max(1, ...array_map(
-    fn($m) => (int)$m['total'], $monthly
-));
+// array_merge([1], ...) so max() still works when the list is empty (a period with no recycling)
+$maxMonth = max(array_merge([1], array_map(fn($m) => (int)$m['total'], $monthly)));
 
 $page_title = 'Recycling Statistics';
 $active = 'reports';    
@@ -70,9 +77,14 @@ require '../includes/officer_top.php';
 officer_page_head(
     'chart',
     'Recycling Statistics',
-    'Overview of recycling performance and environmental impact.'
+    'Choose a period, then see recycling performance and environmental impact.'
 );
+$form_action = 'recycling_statistics.php';
+require '../includes/period_form.php';   // the same period box as the admin Reports page
 ?>
+
+<?php if ($rp['previewing']): ?>
+<p class="report-period" id="report"><?= icon('calendar') ?> Showing <strong><?= e($rp['label']) ?></strong></p>
 
 <section class="stat-grid four">
     <?php
@@ -103,7 +115,7 @@ officer_page_head(
         </h2>
 
         <?php if (!$categories || (int)$stats['devices'] === 0): ?>
-            <p class="muted">No recycling data available yet.</p>
+            <p class="muted">No devices were recycled in this period.</p>
         <?php else: ?>
             <ul class="bar-list">
                 <?php foreach ($categories as $c): ?>
@@ -125,7 +137,7 @@ officer_page_head(
         </h2>
 
         <?php if (!$monthly): ?>
-            <p class="muted">No monthly recycling records yet.</p>
+            <p class="muted">No devices were recycled in this period.</p>
         <?php else: ?>
             <ul class="bar-list">
                 <?php foreach (array_reverse($monthly) as $m): ?>
@@ -177,5 +189,7 @@ officer_page_head(
         </table>
     </div>
 </section>
+
+<?php endif; ?>
 
 <?php require '../includes/officer_bottom.php'; ?>

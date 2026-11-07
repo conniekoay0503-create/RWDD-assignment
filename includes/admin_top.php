@@ -74,11 +74,6 @@ function page_head($icon_name, $title, $desc = '', $actions = '')
     }
 }
 
-// Friendly message when a list is empty
-function empty_state($icon_name, $text, $action = '')
-{
-    echo '<div class="empty-state">' . icon($icon_name, 'icon-float') . '<p>' . e($text) . '</p>' . $action . '</div>';
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">

@@ -18,7 +18,6 @@ $records = db_all($conn, "
         SELECT deviceID, SUM(points) AS points
         FROM points_transactions
         WHERE txn_type = 'earn'
-            AND description LIKE 'Recycling reward for device %'
         GROUP BY deviceID
     ) p ON d.deviceID = p.deviceID
     WHERE d.status = 'Recycled'

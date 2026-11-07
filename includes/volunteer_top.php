@@ -13,10 +13,10 @@ $sections = [
     'home'      => ['Home', 'home', ['index.php' => ['Home', 'home']]],
     'jobs'      => ['My jobs', 'wrench', ['my_jobs.php' => ['My jobs', 'wrench']]],
     'queue'     => ['Repair queue', 'inbox', ['repair_queue.php' => ['Repair queue', 'inbox']]],
-    'report'    => ['Repair report', 'chart', ['report.php' => ['Repair report', 'chart']]],
-    'points'    => ['Points & cashback', 'wallet', ['points.php' => ['Points & cashback', 'wallet']]],
+    'points'    => ['Rewards', 'gift', ['points.php' => ['Rewards', 'gift']]],   // same page design as the student Rewards
     'challenge' => ['Challenge & rank', 'flag', ['challenge.php' => ['Challenge & rank', 'flag']]],
     'history'   => ['Repair history', 'history', ['history.php' => ['Repair history', 'history']]],
+    'report'    => ['Repair report', 'chart', ['report.php' => ['Repair report', 'chart']]],   // the report is always last
 ];
 
 // Small red numbers on the navigation bar = things waiting for this volunteer
@@ -41,11 +41,6 @@ function page_head($icon_name, $title, $desc = '', $actions = '')
     echo '</div>';
 }
 
-// Friendly message when a list is empty
-function empty_state($icon_name, $text, $action = '')
-{
-    echo '<div class="empty-state">' . icon($icon_name, 'icon-float') . '<p>' . e($text) . '</p>' . $action . '</div>';
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">

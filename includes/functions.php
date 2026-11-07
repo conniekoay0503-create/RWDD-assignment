@@ -118,6 +118,26 @@ function notify_admins($conn, $title, $message)
     }
 }
 
+/* ---------- Small page helpers (used by every role) ---------- */
+
+// Friendly message when a list is empty
+function empty_state($icon_name, $text, $action = '')
+{
+    echo '<div class="empty-state">' . icon($icon_name, 'icon-float') . '<p>' . e($text) . '</p>' . $action . '</div>';
+}
+
+// One table row that says "nothing here yet" (so the message sits INSIDE the table, under the headings)
+function empty_row($colspan, $icon_name, $text)
+{
+    echo '<tr><td colspan="' . (int) $colspan . '" class="empty-msg muted">' . icon($icon_name) . ' ' . e($text) . '</td></tr>';
+}
+
+// "Pending Consent" -> "status-pending-consent" (the badge colour class)
+function status_class($status)
+{
+    return 'status-' . strtolower(str_replace(' ', '-', $status));
+}
+
 /* ---------- Points (one rule for the whole website) ---------- */
 
 // Points for one device = weight x multiplier (x 2 if repaired), rounded DOWN, but never more than the max.
@@ -127,6 +147,95 @@ function calc_points($kg, $multiplier, $max, $repaired = false)
 {
     $raw = (float) $kg * (float) $multiplier * ($repaired ? 2 : 1);
     return (int) min(floor(round($raw, 2)), (int) $max);
+}
+
+/* ---------- Report period (Month / Year / Date range) - used by every role's report ---------- */
+
+// Reads the period from the URL (GET, so a report can be bookmarked) and checks it.
+// Every report query then uses   date >= $r['start'] AND date < $r['end']   so the last day is fully included.
+// The form for it is includes/period_form.php.
+function report_period()
+{
+    $r = [
+        'period' => $_GET['period'] ?? 'month',
+        'month'  => $_GET['month'] ?? date('Y-m'),
+        'year'   => (int) ($_GET['year'] ?? date('Y')),
+        'from'   => $_GET['from'] ?? date('Y-m-01'),
+        'to'     => $_GET['to'] ?? date('Y-m-d'),
+        'error'  => '',
+        'previewing' => isset($_GET['preview']),   // the report only appears after "Preview" is pressed
+    ];
+    foreach (['month', 'from', 'to'] as $k) if (!is_string($r[$k])) $r[$k] = '';
+
+    if ($r['period'] === 'year') {
+        if ($r['year'] < 2000 || $r['year'] > 2100) $r['year'] = (int) date('Y');
+        $r['start'] = $r['year'] . '-01-01';
+        $r['end']   = ($r['year'] + 1) . '-01-01';
+        $r['label'] = 'Year ' . $r['year'];
+    } elseif ($r['period'] === 'range') {
+        if (!strtotime($r['from']) || !strtotime($r['to']) || $r['to'] < $r['from']) {
+            $r['error'] = 'Please choose a valid date range (the "to" date must be on or after the "from" date).';
+            $r['from'] = date('Y-m-01');
+            $r['to']   = date('Y-m-d');
+        }
+        $r['start'] = date('Y-m-d', strtotime($r['from']));
+        $r['end']   = date('Y-m-d', strtotime($r['to'] . ' +1 day'));   // +1 day so the "to" date is included
+        $r['label'] = nice_date($r['start']) . ' – ' . nice_date($r['to']);
+    } else {
+        $r['period'] = 'month';
+        if (!preg_match('/^\d{4}-\d{2}$/', $r['month'])) $r['month'] = date('Y-m');
+        $r['start'] = $r['month'] . '-01';
+        $r['end']   = date('Y-m-d', strtotime($r['start'] . ' +1 month'));
+        $r['label'] = date('F Y', strtotime($r['start']));
+    }
+    $r['last_day'] = date('Y-m-d', strtotime($r['end'] . ' -1 day'));   // the last day INSIDE the period (for showing)
+    return $r;
+}
+
+/* ---------- Redeem a reward (one rule for students AND volunteers) ---------- */
+
+// Returns [true, message] or [false, message]. Everything is ONE transaction:
+// redemption + points deduction + stock, all or nothing.
+// Danger: two clicks at once could spend the same points twice. Fix: lock this user's row first
+// (FOR UPDATE), so the second request waits and then sees the NEW balance.
+function redeem_reward($conn, $tp, $reward_id)
+{
+    if (!is_string($reward_id) || !preg_match('/^RW[0-9]{3,7}$/', $reward_id)) {
+        return [false, 'Invalid reward.'];
+    }
+    $conn->begin_transaction();
+    try {
+        db_one($conn, "SELECT tp_number FROM users WHERE tp_number = ? FOR UPDATE", 's', [$tp]);
+
+        $reward = db_one($conn, "SELECT reward_name, points_required, cash_value FROM rewards WHERE rewardID = ?", 's', [$reward_id]);
+        if (!$reward) throw new RuntimeException('That reward does not exist.');
+
+        $need = (int) $reward['points_required'];
+        $balance = (int) db_value($conn, "SELECT COALESCE(SUM(points), 0) FROM points_transactions WHERE tp_number = ?", 's', [$tp]);
+        if ($balance < $need) throw new RuntimeException('You do not have enough points for ' . $reward['reward_name'] . '.');
+
+        // Take 1 from the stock now, so two people cannot get the last one (the admin's Reject puts it back)
+        if (db_exec($conn, "UPDATE rewards SET stock = stock - 1 WHERE rewardID = ? AND stock > 0", 's', [$reward_id]) !== 1) {
+            throw new RuntimeException($reward['reward_name'] . ' is out of stock.');
+        }
+
+        $red_id = next_id($conn, 'redemptions', 'redemptionID', 'R');
+        db_exec($conn, "INSERT INTO redemptions (redemptionID, tp_number, rewardID, points_used, cash_value, status) VALUES (?, ?, ?, ?, ?, 'pending')",
+            'sssid', [$red_id, $tp, $reward_id, $need, (float) $reward['cash_value']]);
+        db_exec($conn, "INSERT INTO points_transactions (transactionID, tp_number, redemptionID, points, txn_type, description) VALUES (?, ?, ?, ?, 'redeem', ?)",
+            'sssis', [next_id($conn, 'points_transactions', 'transactionID', 'T'), $tp, $red_id, -$need, 'Redeemed ' . $reward['reward_name']]);
+
+        $who = db_value($conn, "SELECT name FROM users WHERE tp_number = ?", 's', [$tp]);
+        notify_admins($conn, 'New cashback request',
+            $who . ' redeemed ' . $reward['reward_name'] . ' (' . $need . ' points). Please pay it to the APCard.');
+
+        $conn->commit();
+        return [true, $reward['reward_name'] . ' requested. It will be paid to your APCard after the admin approves it.'];
+    } catch (Throwable $e) {
+        $conn->rollback();
+        if (!($e instanceof RuntimeException)) error_log('redeem_reward: ' . $e->getMessage());
+        return [false, $e instanceof RuntimeException ? $e->getMessage() : 'Something went wrong. Please try again.'];
+    }
 }
 
 /* ---------- Deadlines (one rule for the whole website) ---------- */

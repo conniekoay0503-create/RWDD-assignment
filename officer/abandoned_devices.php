@@ -156,7 +156,7 @@ officer_page_head('clock', 'Abandoned Devices',
                 <tr>
                     <th>ID</th><th>Device</th><th>Student</th>
                     <th>Status</th><th>Deadline</th>
-                    <th>Notify Volunteer</th><th>Dispose</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -171,7 +171,8 @@ officer_page_head('clock', 'Abandoned Devices',
                     <td><?= e($d['student_name']) ?></td>
                     <td><span class="badge <?= e('status-' . strtolower(str_replace(' ', '-', $d['status']))) ?>"><?= e($d['status']) ?></span></td>
                     <td>Passed (<?= nice_date($d['deadline']) ?>)</td>
-                    <td>
+                    <td class="action-forms">
+                        <!-- Each action = one line: choose from the list, then press the button -->
                         <form method="post" data-confirm="Notify this Volunteer?">
                             <?= csrf_field() ?>
                             <input type="hidden" name="action" value="notify">
@@ -189,8 +190,6 @@ officer_page_head('clock', 'Abandoned Devices',
                                 <?= icon('bell') ?> Notify
                             </button>
                         </form>
-                    </td>
-                    <td>
                         <form method="post" data-confirm="Dispose of <?= e($d['device_name']) ?>? The owner did not collect it. This cannot be undone.">
                             <?= csrf_field() ?>
                             <input type="hidden" name="action" value="dispose">

@@ -18,7 +18,7 @@ $points = (int) db_value($conn, "
     JOIN devices d ON p.deviceID = d.deviceID
     WHERE p.txn_type = 'earn'
       AND d.status = 'Recycled'
-      AND p.description LIKE 'Recycling reward for device %'
+      AND p.tp_number = d.submitted_by   -- the owner's points for this recycled device
 ");
 
 

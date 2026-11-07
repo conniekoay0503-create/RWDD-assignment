@@ -463,7 +463,9 @@ body.app {
 /* A column with a title on top and a box under it (student pages): the box stretches,
    so the two boxes side by side always end at the same height */
 .two-col > div { display: flex; flex-direction: column; }
-.two-col > div > .card:last-child { flex: 1; margin-bottom: 0; }
+.two-col > div > .card:last-child { flex: 1; margin-bottom: 0; display: flex; flex-direction: column; }
+/* When the stretched box only holds a "No ... yet" message, put the message in the middle of the box */
+.two-col > div > .card > .empty-state:only-child { margin-block: auto; }
 
 /* Stat cards */
 .stat-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-bottom: 1.25rem; }
@@ -944,7 +946,7 @@ a.stat-card:hover { transform: translateY(-2px); }
 
 /* Points: + in green, - in red (.text-danger) */
 .points-plus { color: var(--mint-fg); }
-small.block { display: block; }
+.block { display: block; }   /* put this text on its own line */
 
 /* Leaderboard: my own row stands out */
 tr.is-me td { background: var(--primary-soft); }
@@ -975,6 +977,17 @@ tr.is-me td { background: var(--primary-soft); }
 @media (max-width: 520px) {
     .student-app .brand-text { font-size: .88rem; }
 }
+
+/* "Showing November 2026" line above a report (student / officer) */
+.report-period { display: flex; align-items: center; gap: 0.4rem; margin: 0 0 1rem; color: var(--muted); }
+.report-period .icon { color: var(--primary); }
+
+/* Officer "Abandoned devices": two actions in one cell, each = [list][button] on one line, buttons the same width */
+.action-forms { min-width: 22rem; }
+.action-forms form { display: flex; align-items: center; gap: 0.5rem; }
+.action-forms form + form { margin-top: 0.5rem; }
+.action-forms select { flex: 1; min-width: 0; padding-block: 0.45rem; }
+.action-forms .btn { width: 8rem; flex-shrink: 0; justify-content: center; }
 
 /* ============================================================
    15. Volunteer pages (moved here from volunteer.css)

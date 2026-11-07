@@ -403,44 +403,7 @@ function vol_rewards($conn)
     return db_all($conn, "SELECT rewardID, reward_name, description, points_required, cash_value, stock FROM rewards ORDER BY points_required ASC");
 }
 
-/*
- * Redeem a reward.
- * Danger: two clicks at once could spend the same points twice. Fix: lock this user's row first
- * (FOR UPDATE), so the second request waits and then sees the NEW balance.
- * Everything is one transaction: redemption + points deduction + stock, all or nothing.
- */
-function vol_redeem($conn, $me, $reward_id)
-{
-    return vol_transaction($conn, function () use ($conn, $me, $reward_id) {
-        db_one($conn, "SELECT tp_number FROM users WHERE tp_number = ? FOR UPDATE", 's', [$me]);
-
-        $reward = db_one($conn, "SELECT rewardID, reward_name, points_required, cash_value FROM rewards WHERE rewardID = ?", 's', [$reward_id]);
-        if (!$reward) {
-            return [false, 'That reward does not exist.'];
-        }
-        if (vol_points_balance($conn, $me) < (int) $reward['points_required']) {
-            return [false, 'You do not have enough points for ' . $reward['reward_name'] . '.'];
-        }
-        if (db_exec($conn, "UPDATE rewards SET stock = stock - 1 WHERE rewardID = ? AND stock > 0", 's', [$reward_id]) !== 1) {
-            return [false, $reward['reward_name'] . ' is out of stock.'];
-        }
-
-        $red_id = next_id($conn, 'redemptions', 'redemptionID', 'R');
-        db_exec($conn, "INSERT INTO redemptions (redemptionID, tp_number, rewardID, points_used, cash_value, status) VALUES (?, ?, ?, ?, ?, 'pending')",
-            'sssid', [$red_id, $me, $reward_id, (int) $reward['points_required'], (float) $reward['cash_value']]);
-
-        $txn_id = next_id($conn, 'points_transactions', 'transactionID', 'T');
-        db_exec($conn, "INSERT INTO points_transactions (transactionID, tp_number, redemptionID, points, txn_type, description) VALUES (?, ?, ?, ?, 'redeem', ?)",
-            'sssis', [$txn_id, $me, $red_id, -((int) $reward['points_required']), 'Redeemed ' . $reward['reward_name']]);
-
-        // Same message the student side sends, so the admin sees one style of request
-        $who = db_value($conn, "SELECT name FROM users WHERE tp_number = ?", 's', [$me]);
-        notify_admins($conn, 'New cashback request',
-            $who . ' redeemed ' . $reward['reward_name'] . ' (' . (int) $reward['points_required'] . ' points). Please pay it to the APCard.');
-
-        return [true, $reward['reward_name'] . ' requested. It will be paid to your APCard after the admin approves it.'];
-    });
-}
+/* Redeem a reward: the shared redeem_reward() in functions.php (students use the same one). */
 
 /* Points ledger lines of one volunteer, newest first. Optional date window and limit. */
 function vol_points_history($conn, $me, $from = null, $to_exclusive = null, $limit = 0)

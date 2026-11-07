@@ -8,39 +8,14 @@ require '../config/db.php';
 require '../includes/functions.php';
 require_role($conn, 'admin', '../');
 
-// ---------- 1. Work out the period from the form (GET, so the report can be bookmarked) ----------
-$period = $_GET['period'] ?? 'month';
-$type   = $_GET['type'] ?? 'all';
+// ---------- 1. The period from the form (shared by every role's report: report_period() in functions.php) ----------
+$rp = report_period();
+$type = $_GET['type'] ?? 'all';
 if (!in_array($type, ['all', 'devices', 'points', 'cashback'])) $type = 'all';
-
-$month = $_GET['month'] ?? date('Y-m');
-$year  = (int) ($_GET['year'] ?? date('Y'));
-$from  = $_GET['from'] ?? date('Y-m-01');
-$to    = $_GET['to'] ?? date('Y-m-d');
-$error = '';
-$previewing = isset($_GET['preview']);   // the report only appears after the admin presses "Preview"
-
-if ($period === 'year') {
-    if ($year < 2000 || $year > 2100) $year = (int) date('Y');
-    $start = $year . '-01-01';
-    $end   = ($year + 1) . '-01-01';
-    $period_label = 'Year ' . $year;
-} elseif ($period === 'range') {
-    if (!strtotime($from) || !strtotime($to) || $to < $from) {
-        $error = 'Please choose a valid date range (the "to" date must be on or after the "from" date).';
-        $from = date('Y-m-01');
-        $to   = date('Y-m-d');
-    }
-    $start = date('Y-m-d', strtotime($from));
-    $end   = date('Y-m-d', strtotime($to . ' +1 day'));   // +1 day so the "to" date is included
-    $period_label = nice_date($start) . ' – ' . nice_date($to);
-} else {
-    $period = 'month';
-    if (!preg_match('/^\d{4}-\d{2}$/', $month)) $month = date('Y-m');
-    $start = $month . '-01';
-    $end   = date('Y-m-d', strtotime($start . ' +1 month'));
-    $period_label = date('F Y', strtotime($start));
-}
+$start = $rp['start'];
+$end = $rp['end'];
+$period_label = $rp['label'];
+$previewing = $rp['previewing'];
 $p = [$start, $end];   // the two parameters every query uses
 
 // ---------- 2. Queries ----------
@@ -94,51 +69,18 @@ require '../includes/admin_top.php';
 page_head('chart', 'Reports', 'Choose a period, preview the report, then print it or save it as a PDF.');
 ?>
 
-<?php if ($error): ?><div class="alert alert-error no-print" role="alert" data-flash="error"><?= e($error) ?></div><?php endif; ?>
+<?php
+// The "choose a period" box is shared by every role (includes/period_form.php). The admin adds "Report type".
+$form_action = 'reports.php';
+$extra_field = '<div class="field"><label for="type">' . icon('filter') . ' Report type</label><select id="type" name="type">';
+foreach (['all' => 'Everything', 'devices' => 'Devices & repairs', 'points' => 'Points', 'cashback' => 'Cashback'] as $k => $v) {
+    $extra_field .= '<option value="' . $k . '"' . ($type === $k ? ' selected' : '') . '>' . $v . '</option>';
+}
+$extra_field .= '</select></div>';
+require '../includes/period_form.php';
+?>
 
-<section class="card no-print">
-    <form method="get" action="reports.php#report" class="report-form" data-report-form>
-        <fieldset class="radio-row">
-            <legend>Period</legend>
-            <label class="seg"><input type="radio" name="period" value="month" <?= $period === 'month' ? 'checked' : '' ?>><span><?= icon('calendar') ?> Month</span></label>
-            <label class="seg"><input type="radio" name="period" value="year" <?= $period === 'year' ? 'checked' : '' ?>><span><?= icon('flag') ?> Year</span></label>
-            <label class="seg"><input type="radio" name="period" value="range" <?= $period === 'range' ? 'checked' : '' ?>><span><?= icon('sliders') ?> Date range</span></label>
-        </fieldset>
-        <div class="field-row">
-            <div class="field" data-period-field="month">
-                <label for="month">Month</label>
-                <input type="month" id="month" name="month" value="<?= e($month) ?>">
-            </div>
-            <div class="field" data-period-field="year">
-                <label for="year">Year</label>
-                <input type="number" id="year" name="year" min="2000" max="2100" value="<?= (int) $year ?>">
-            </div>
-            <div class="field" data-period-field="range">
-                <label for="from">From</label>
-                <input type="date" id="from" name="from" value="<?= e($from) ?>" data-start-for="to">
-            </div>
-            <div class="field" data-period-field="range">
-                <label for="to">To</label>
-                <input type="date" id="to" name="to" value="<?= e($to) ?>">
-            </div>
-            <div class="field">
-                <label for="type"><?= icon('filter') ?> Report type</label>
-                <select id="type" name="type">
-                    <?php foreach (['all' => 'Everything', 'devices' => 'Devices & repairs', 'points' => 'Points', 'cashback' => 'Cashback'] as $k => $v): ?>
-                        <option value="<?= $k ?>" <?= $type === $k ? 'selected' : '' ?>><?= $v ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-        </div>
-        <div class="btn-row">
-            <button class="btn btn-primary" name="preview" value="1"><?= icon('eye') ?> Preview</button>
-        </div>
-    </form>
-</section>
-
-<?php if (!$previewing): ?>
-    <?php empty_state('chart', 'Choose a period and press Preview to see the report here.'); ?>
-<?php else: ?>
+<?php if ($previewing): ?>
 <!-- The white "paper" below is exactly what gets printed / saved as PDF -->
 <p class="print-area-label no-print"><?= icon('printer') ?> Print area: only the white part below is printed or saved as PDF.</p>
 <article class="report" id="report">

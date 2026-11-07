@@ -1,7 +1,7 @@
 <?php
 /*
  * Repair report (wireframe Figure 60)
- * A GET form picks Month / Year / Date range; the report below is rebuilt from the URL.
+ * The period box (Month / Year / Date range) is shared by every role: report_period() + includes/period_form.php.
  * "Print" opens the browser print dialog (choose "Save as PDF" to get a PDF).
  * The team stylesheet's @media print rules hide the menu and the form, so only the report prints.
  */
@@ -11,59 +11,14 @@ require_once '../includes/volunteer_logic.php';
 require_role($conn, 'volunteer', '../');
 $me = $_SESSION['tp_number'];
 
-// ---- 1) read + VALIDATE the period (never trust the URL) ----
-$period = $_GET['period'] ?? 'month';
-if (!in_array($period, ['month', 'year', 'range'], true)) $period = 'month';
-
-$month = $_GET['month'] ?? date('Y-m');
-$year  = $_GET['year']  ?? date('Y');
-$from  = $_GET['from']  ?? date('Y-m-01');
-$to    = $_GET['to']    ?? date('Y-m-d');
-
-function vol_valid_date($d)
-{
-    return is_string($d) && preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $d, $m) && checkdate((int) $m[2], (int) $m[3], (int) $m[1]);
-}
-
-$error = '';
-if ($period === 'month') {
-    if (!is_string($month) || !preg_match('/^(\d{4})-(\d{2})$/', $month, $m) || !checkdate((int) $m[2], 1, (int) $m[1])) {
-        $error = 'Please choose a valid month.';
-    } else {
-        $start = $month . '-01';
-        $end   = date('Y-m-t', strtotime($start));
-        $label = date('F Y', strtotime($start));
-    }
-} elseif ($period === 'year') {
-    if (!is_string($year) || !preg_match('/^\d{4}$/', $year) || (int) $year < 2000 || (int) $year > 2100) {
-        $error = 'Please enter a valid year (2000 to 2100).';
-    } else {
-        $start = $year . '-01-01';
-        $end   = $year . '-12-31';
-        $label = $year;
-    }
-} else {
-    if (!vol_valid_date($from) || !vol_valid_date($to)) {
-        $error = 'Please choose a valid start and end date.';
-    } elseif ($from > $to) {
-        $error = 'The start date must not be after the end date.';
-    } elseif (strtotime($to) - strtotime($from) > 366 * 86400 * 3) {
-        $error = 'Please choose a period of 3 years or less.';
-    } else {
-        $start = $from;
-        $end   = $to;
-        $label = date('j M Y', strtotime($from)) . ' to ' . date('j M Y', strtotime($to));
-    }
-}
-if ($error !== '') {   // fall back to this month so the page still works
-    set_flash('error', $error . ' Showing this month instead.');
-    $period = 'month'; $month = date('Y-m');
-    $start = date('Y-m-01'); $end = date('Y-m-t'); $label = date('F Y');
-}
-
+// ---- 1) the period (shared rule: report_period() in functions.php checks the URL) ----
+$rp = report_period();
+$label = $rp['label'];
+$start = $rp['start'];
+$end   = $rp['last_day'];   // the last day inside the period
 // The database wants "from this moment" and "before this moment"
-$from_dt = $start . ' 00:00:00';
-$to_dt   = date('Y-m-d', strtotime($end . ' +1 day')) . ' 00:00:00';
+$from_dt = $rp['start'] . ' 00:00:00';
+$to_dt   = $rp['end'] . ' 00:00:00';
 
 // ---- 2) load the data ----
 $stats = vol_stats($conn, $me, $from_dt, $to_dt);
@@ -92,29 +47,15 @@ $page_title = 'Repair report';
 $active = 'report';
 require '../includes/volunteer_top.php';
 
-page_head('chart', 'Repair report', 'Choose a period, check the report, then print it or save it as a PDF.');
+page_head('chart', 'Repair report', 'Choose a period, preview the report, then print it or save it as a PDF.');
 ?>
 
-<form method="get" action="report.php" class="card no-print" data-report-form>
-    <div class="field-row">
-        <div class="field">
-            <label>Period</label>
-            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap">
-                <?php foreach (['month' => 'Month', 'year' => 'Year', 'range' => 'Date range'] as $k => $t): ?>
-                    <label class="seg"><input type="radio" name="period" value="<?= $k ?>" <?= $period === $k ? 'checked' : '' ?>><span><?= $t ?></span></label>
-                <?php endforeach; ?>
-            </div>
-        </div>
-        <div class="field" data-period-field="month"><label for="f-month">Month</label><input id="f-month" type="month" name="month" value="<?= e($period === 'month' ? substr($start, 0, 7) : date('Y-m')) ?>"></div>
-        <div class="field" data-period-field="year"><label for="f-year">Year</label><input id="f-year" type="number" name="year" min="2000" max="2100" value="<?= e($period === 'year' ? $year : date('Y')) ?>"></div>
-        <div class="field" data-period-field="range"><label for="f-from">From</label><input id="f-from" type="date" name="from" value="<?= e($start) ?>"></div>
-        <div class="field" data-period-field="range"><label for="f-to">To</label><input id="f-to" type="date" name="to" value="<?= e($end) ?>"></div>
-    </div>
-    <div class="btn-row">
-        <button type="submit" class="btn btn-primary"><?= icon('search') ?> Show report</button>
-        <button type="button" class="btn btn-outline" data-print><?= icon('printer') ?> Print / Save as PDF</button>
-    </div>
-</form>
+<?php
+$form_action = 'report.php';
+require '../includes/period_form.php';   // the same period box as the admin Reports page
+?>
+
+<?php if ($rp['previewing']): ?>
 
 <section class="card report">
     <div class="report-head">
@@ -122,7 +63,10 @@ page_head('chart', 'Repair report', 'Choose a period, check the report, then pri
             <h2><?= icon('chart') ?> Volunteer repair report</h2>
             <p><?= e($label) ?> · <?= e($_SESSION['name']) ?> (<?= e($me) ?>)</p>
         </div>
-        <small class="muted">Report <?= e($code) ?> · generated <?= e(date('j M Y, g:i A')) ?></small>
+        <div>
+            <small class="muted">Report <?= e($code) ?> · generated <?= e(date('j M Y, g:i A')) ?></small>
+            <button type="button" class="btn btn-outline btn-sm no-print" data-print><?= icon('printer') ?> Print / Save as PDF</button>
+        </div>
     </div>
 
     <div class="stat-grid four">
@@ -175,5 +119,7 @@ page_head('chart', 'Repair report', 'Choose a period, check the report, then pri
         </table></div>
     <?php endif; ?>
 </section>
+
+<?php endif; ?>
 
 <?php require '../includes/volunteer_bottom.php'; ?>

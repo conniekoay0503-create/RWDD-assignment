@@ -5,7 +5,7 @@ $student_nav = [
     'index.php' => ['Dashboard', 'home'],
     'submit-device.php' => ['Submit Device', 'plus'],
     'my-devices.php' => ['My Devices', 'device'],
-    'rewards.php' => ['Rewards', 'wallet'],
+    'rewards.php' => ['Rewards', 'gift'],
     'challenges.php' => ['Challenges', 'flag'],
     'volunteer-request.php' => ['Volunteer', 'heart'],
     'feedback.php' => ['Feedback', 'message'],
@@ -54,23 +54,6 @@ function page_head($icon_name, $title, $desc = '', $actions = '')
     echo '</div>';
 }
 
-// Friendly message when a list is empty (same as admin)
-function empty_state($icon_name, $text, $action = '')
-{
-    echo '<div class="empty-state">' . icon($icon_name, 'icon-float') . '<p>' . e($text) . '</p>' . $action . '</div>';
-}
-
-// One table row that says "nothing here yet" (so the message sits INSIDE the table, under the headings)
-function empty_row($colspan, $icon_name, $text)
-{
-    echo '<tr><td colspan="' . (int) $colspan . '" class="empty-msg muted">' . icon($icon_name) . ' ' . e($text) . '</td></tr>';
-}
-
-// "Pending Consent" -> "status-pending-consent" (the badge colour class)
-function status_class($status)
-{
-    return 'status-' . strtolower(str_replace(' ', '-', $status));
-}
 ?>
 
 <!DOCTYPE html>
