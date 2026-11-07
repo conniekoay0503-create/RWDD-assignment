@@ -31,12 +31,7 @@ if ($device['status'] !== 'Awaiting Recycle' ||
     redirect('recycling_queue.php');
 }
 
-$methods = [
-    'Certified e-waste recycler',
-    'Battery take-back programme',
-    'Metal recovery',
-    'Harvest parts for repair stock'
-];
+$methods = DISPOSAL_METHODS;   // the shared list in functions.php
 
 $page_title = 'Process Recycling';
 $active = 'recycling';

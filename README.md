@@ -129,7 +129,7 @@ Who changes what:
 Every status change also INSERTs one row into `device_status_history` (the timeline), and **whoever changes the status calls `notify()` at that moment** to tell the owner.
 
 **7-day rules.** XAMPP has no scheduler, so `require_role()` checks them when a page opens (at most once every 5 minutes per user, a *throttle*, so the pages stay fast). The rule is written **once**, in `functions.php` (`DEADLINE_DAYS`, `WAITING_FOR_OWNER`, `WAITING_FOR_ACTION`, `overdue_sql()`), and every page uses it:
-- **WAITING_FOR_OWNER** (Ready for Collection, Returned Unrepaired, Returned Unclaimed) for more than 7 days: overdue. `check_collection_deadlines()` notifies the owner, the admins and the officers (once), and the device appears on the officer's Abandoned Devices page, where it can be disposed of.
+- **WAITING_FOR_OWNER** (Ready for Collection, Returned Unrepaired, Returned Unclaimed) for more than 7 days: overdue. `check_collection_deadlines()` notifies the owner, the admins and the officers (once), and the device appears on the officer's Abandoned Devices page. There the officer first presses **Remind owner**; only **24 hours** after a reminder (`DISPOSE_WAIT_HOURS`) can the device be disposed of (checked in SQL, and the button is disabled until then). The disposal methods are one shared list, `DISPOSAL_METHODS`.
 - **WAITING_FOR_ACTION** (Pending Consent, Return Requested) for more than 7 days: also overdue on the admin dashboard. `check_collection_deadlines()` reminds the person who must act (once): the owner for Pending Consent (recycle or return?), the volunteer for Return Requested (bring it to the counter). These are never on the Abandoned Devices page, so a Return Requested device can **never** be disposed of: the student has asked for it back.
 - Dropped off but not claimed within 7 days: becomes Returned Unclaimed (`vol_return_expired()`).
 
@@ -146,7 +146,7 @@ the volunteer who repaired it gets the normal amount
 One function does this for the whole website: `calc_points($kg, $multiplier, $max, $repaired)` in `functions.php` (`main.js` copies the same rule for the admin calculator). It rounds to 2 decimals before rounding down, because a computer stores 0.29 × 100 as 28.999…, and `floor()` alone would give 28 instead of 29.
 
 When the points are given:
-- **Repaired**: when the volunteer presses "Mark as fixed" (`vol_change_status()`), in the same transaction: the owner × 2 and the volunteer × 1.
+- **Repaired**: the volunteer × 1 when they press "Mark as fixed" (`vol_change_status()`), and the owner × 2 when they press "Confirm Collection" (`student/device-details.php`), each in the same transaction as its status change. Points are given at the moment the work is really finished: a repaired device that is never collected (and is disposed of) earns the owner nothing, the same as the challenge rule (`Completed` only).
 - **Recycled**: when the officer confirms recycling: the owner × 1.
 - The UNIQUE key `(deviceID, tp_number)` in `points_transactions` stops anyone being paid twice for one device.
 

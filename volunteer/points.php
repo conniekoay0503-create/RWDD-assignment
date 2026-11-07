@@ -15,7 +15,7 @@ require '../includes/rewards_actions.php';
 
 $earn_rules = [
     ['wrench',  'You repair a device', 'You earn the basic points (× 1) when you press "Mark as fixed".'],
-    ['users',   'The owner earns too',  'The owner of the device earns double (× 2) for the same repair.'],
+    ['users',   'The owner earns too',  'The owner earns double (× 2) for the same repair, when they collect the device.'],
     ['recycle', 'Recycled devices',     'Devices that cannot be fixed earn points for their owner only, not for the volunteer.'],
 ];
 

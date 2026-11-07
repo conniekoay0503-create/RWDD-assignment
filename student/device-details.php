@@ -94,8 +94,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'Student action: ' . $actions[$action][2]
                 ]);
 
+            // Repaired and collected: NOW the owner earns double points (× 2).
+            // (The volunteer already earned × 1 when they pressed "Mark as fixed".)
+            $flash = 'Device updated.';
+            if ($action === 'collect_repaired') {
+                $d = db_one($conn,
+                    "SELECT d.weight_kg, d.device_name, c.multiplier, c.max_points
+                     FROM devices d JOIN categories c ON c.categoryID = d.categoryID
+                     WHERE d.deviceID = ?", 's', [$id]);
+                // Only once per device (the UNIQUE key would stop a second row anyway)
+                $paid = db_value($conn, "SELECT COUNT(*) FROM points_transactions WHERE deviceID = ? AND tp_number = ?", 'ss', [$id, $tp]);
+                if (!$paid && $d['weight_kg'] !== null) {
+                    $pts = calc_points($d['weight_kg'], $d['multiplier'], $d['max_points'], true);
+                    db_exec($conn,
+                        "INSERT INTO points_transactions (transactionID, tp_number, deviceID, points, txn_type, description)
+                         VALUES (?, ?, ?, ?, 'earn', ?)",
+                        'sssis', [next_id($conn, 'points_transactions', 'transactionID', 'T'), $tp, $id, $pts, $d['device_name'] . ' repaired']);
+                    $flash = 'Collected. You earned ' . $pts . ' points!';
+                }
+            }
+
             $conn->commit();
-            set_flash('success', 'Device updated.');
+            set_flash('success', $flash);
             redirect('device-details.php?id=' . urlencode($id));
         } catch (Throwable $e) {
             $conn->rollback();

@@ -986,6 +986,7 @@ tr.is-me td { background: var(--primary-soft); }
 .action-forms select { flex: 1; min-width: 0; padding-block: 0.45rem; }
 .action-forms .btn { width: 9.5rem; flex-shrink: 0; justify-content: center; }
 .action-forms .remind-note { flex: 1; min-width: 0; }   /* takes the place of the list, so both buttons line up */
+.btn:disabled { opacity: 0.45; transform: none; pointer-events: none; }   /* e.g. Dispose before the owner was reminded */
 
 /* ============================================================
    15. Volunteer pages (moved here from volunteer.css)

@@ -246,6 +246,12 @@ const DEADLINE_DAYS = 7;   // a device may wait this many days before it counts 
 const WAITING_FOR_OWNER = ['Ready for Collection', 'Returned Unrepaired', 'Returned Unclaimed'];
 // Someone must decide or act: the owner (recycle or return?) or the volunteer (take it to the counter)
 const WAITING_FOR_ACTION = ['Pending Consent', 'Return Requested'];
+// How the Green Hub gets rid of a device (officer: recycle, confirm recycling, dispose). One list for every page.
+const DISPOSAL_METHODS = ['Certified e-waste recycler', 'Battery take-back programme', 'Metal recovery', 'Harvest parts for repair stock'];
+
+// Before an officer may dispose of a device, the owner must have been reminded at least this long ago
+const DISPOSE_WAIT_HOURS = 24;
+
 // The device is finished: nothing more will happen to it
 const FINISHED_STATUSES = ['Cancelled', 'Completed', 'Collected Unrepaired', 'Recycled', 'Disposed'];
 

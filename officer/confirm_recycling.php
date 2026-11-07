@@ -19,7 +19,7 @@ $method    = $_POST['disposal_method'] ?? '';
 $officerID = $_SESSION['tp_number'];
 $back      = 'process_recycling.php?deviceID=' . urlencode($deviceID);
 
-$methods = ['Certified e-waste recycler', 'Battery take-back programme', 'Metal recovery', 'Harvest parts for repair stock'];
+$methods = DISPOSAL_METHODS;   // the shared list in functions.php
 
 // ---- check the form (the browser checks too, but JavaScript can be switched off) ----
 if (!preg_match('/^D[0-9]{3,9}$/', $deviceID)) {

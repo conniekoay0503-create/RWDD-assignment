@@ -8,6 +8,7 @@
  *   remind  - send the OWNER a reminder to collect the device (at most once a day per device).
  *             The owner is the one who must come, so the reminder goes to the owner, not to a volunteer.
  *   dispose - the owner never came: the officer disposes of it (status 'Disposed').
+ *             Only DISPOSE_WAIT_HOURS (24 h) after a reminder, so the owner really had time to read it and come.
  *             Allowed only for devices in this list, so a 'Return Requested' device can never be disposed:
  *             that owner has asked for it back.
  * The CSRF token is checked by require_role().
@@ -19,12 +20,14 @@ require_role($conn, 'officer', '../');
 $me = $_SESSION['tp_number'];
 $error = '';
 $where = overdue_sql(WAITING_FOR_OWNER, 'd.');
-$methods = ['Certified e-waste recycler', 'Battery take-back programme', 'Metal recovery', 'Harvest parts for repair stock'];
+$methods = DISPOSAL_METHODS;   // the shared list in functions.php
 $remind_title = 'Collection reminder: ';   // + deviceID. The same title is used to find the last reminder.
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     $id = $_POST['deviceID'] ?? '';
+    // Same check as the other pages: a device ID looks like D001. (An array or odd text would break bind_param.)
+    if (!is_string($id) || !preg_match('/^D[0-9]{3,9}$/', $id)) $id = '';
 
     // The device must still be in the overdue list (checked again on the server, not only in the browser)
     $device = db_one($conn, "
@@ -57,7 +60,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     } elseif ($action === 'dispose') {
         $method = $_POST['disposal_method'] ?? '';
-        if (!in_array($method, $methods, true)) {
+        // The owner must have been reminded, and had at least 24 hours to come (the reminder says "may be disposed of").
+        // The time is compared inside MySQL (NOW()), the same clock that wrote created_at.
+        $waited = db_value($conn, "SELECT COUNT(*) FROM notifications WHERE tp_number = ? AND title = ?
+                                     AND created_at <= NOW() - INTERVAL " . DISPOSE_WAIT_HOURS . " HOUR",
+                           'ss', [$device['submitted_by'], $remind_title . $id]);
+        if (!$waited) {
+            $error = 'Please remind the owner first and wait at least ' . DISPOSE_WAIT_HOURS . ' hours before disposing of the device.';
+        } elseif (!in_array($method, $methods, true)) {
             $error = 'Please choose a disposal method.';
         } else {
             $conn->begin_transaction();
@@ -96,12 +106,15 @@ $devices = db_all($conn, "
            d.claimed_by, u.name AS student_name,
            DATE_ADD(d.status_changed_at, INTERVAL " . DEADLINE_DAYS . " DAY) AS deadline,
            (SELECT MAX(n.created_at) FROM notifications n
-             WHERE n.tp_number = d.submitted_by AND n.title = CONCAT(?, d.deviceID)) AS last_reminded
+             WHERE n.tp_number = d.submitted_by AND n.title = CONCAT(?, d.deviceID)) AS last_reminded,
+           (SELECT COUNT(*) FROM notifications n
+             WHERE n.tp_number = d.submitted_by AND n.title = CONCAT(?, d.deviceID)
+               AND n.created_at <= NOW() - INTERVAL " . DISPOSE_WAIT_HOURS . " HOUR) > 0 AS can_dispose
     FROM devices d
     JOIN users u ON d.submitted_by = u.tp_number
     WHERE $where
     ORDER BY d.status_changed_at
-", 's', [$remind_title]);
+", 'ss', [$remind_title, $remind_title]);
 
 $unclaimed = count(array_filter($devices, fn($d) => $d['status'] === 'Returned Unclaimed'));
 $uncollected = count($devices) - $unclaimed;
@@ -110,7 +123,7 @@ $page_title = 'Abandoned Devices';
 $active = 'devices';
 require '../includes/officer_top.php';
 officer_page_head('clock', 'Abandoned Devices',
-    'Devices waiting at the Green Hub for more than ' . DEADLINE_DAYS . ' days. Remind the owner, or dispose of the device.');
+    'Devices waiting at the Green Hub for more than ' . DEADLINE_DAYS . ' days. Remind the owner; if they still do not come within ' . DISPOSE_WAIT_HOURS . ' hours, dispose of the device.');
 ?>
 
 <?php if ($error): ?>
@@ -136,12 +149,13 @@ officer_page_head('clock', 'Abandoned Devices',
         <h2 class="card-title"><?= icon('list') ?> Devices Requiring Follow-up</h2>
         <label class="search-box">
             <?= icon('search') ?>
-            <input id="search" type="search" placeholder="Search devices...">
+            <!-- data-filter-table: the shared table search in main.js (same as admin Users) -->
+            <input type="search" placeholder="Search devices..." data-filter-table="abandoned-table" aria-label="Search devices">
         </label>
     </div>
 
     <div class="table-wrap">
-        <table>
+        <table id="abandoned-table">
             <thead>
                 <tr>
                     <th>ID</th><th>Device</th><th>Student</th>
@@ -150,16 +164,13 @@ officer_page_head('clock', 'Abandoned Devices',
                 </tr>
             </thead>
             <tbody>
+                <?php if (!$devices) empty_row(6, 'check', 'No devices require follow-up. All caught up!'); ?>
                 <?php foreach ($devices as $d): ?>
-                <tr class="device-row"
-                    data-search="<?= e(strtolower(implode(' ', [
-                        $d['deviceID'], $d['device_name'],
-                        $d['student_name'], $d['status']
-                    ]))) ?>">
+                <tr>
                     <td><?= e($d['deviceID']) ?></td>
                     <td><?= e($d['device_name']) ?></td>
                     <td><?= e($d['student_name']) ?></td>
-                    <td><span class="badge <?= e('status-' . strtolower(str_replace(' ', '-', $d['status']))) ?>"><?= e($d['status']) ?></span></td>
+                    <td><span class="badge <?= e(status_class($d['status'])) ?>"><?= e($d['status']) ?></span></td>
                     <td>Passed (<?= nice_date($d['deadline']) ?>)</td>
                     <td class="action-forms">
                         <!-- Each action = one line: choose from the list, then press the button -->
@@ -179,15 +190,23 @@ officer_page_head('clock', 'Abandoned Devices',
                             <?= csrf_field() ?>
                             <input type="hidden" name="action" value="dispose">
                             <input type="hidden" name="deviceID" value="<?= e($d['deviceID']) ?>">
-                            <select name="disposal_method" required>
-                                <option value="">Select method</option>
-                                <?php foreach ($methods as $m): ?>
-                                    <option value="<?= e($m) ?>"><?= e($m) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                            <button class="btn btn-danger" type="submit">
-                                <?= icon('trash') ?> Dispose
-                            </button>
+                            <?php if ($d['can_dispose']): ?>
+                                <select name="disposal_method" required>
+                                    <option value="">Select method</option>
+                                    <?php foreach ($methods as $m): ?>
+                                        <option value="<?= e($m) ?>"><?= e($m) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <button class="btn btn-danger" type="submit">
+                                    <?= icon('trash') ?> Dispose
+                                </button>
+                            <?php else: ?>
+                                <!-- Same rule as the server: remind first, then wait 24 hours -->
+                                <small class="remind-note muted">Remind first, then wait <?= DISPOSE_WAIT_HOURS ?> hours</small>
+                                <button class="btn btn-danger" type="submit" disabled title="Remind the owner first">
+                                    <?= icon('trash') ?> Dispose
+                                </button>
+                            <?php endif; ?>
                         </form>
                     </td>
                 </tr>
@@ -196,28 +215,12 @@ officer_page_head('clock', 'Abandoned Devices',
         </table>
     </div>
 
-    <?php if (!$devices): ?>
-        <p class="muted">No devices require follow-up. All caught up!</p>
-    <?php endif; ?>
-    <p id="empty" class="muted" hidden>No matching devices.</p>
+    <p class="muted empty-msg" hidden data-empty-for="abandoned-table">No matching devices.</p>
 </section>
 
 <p class="muted">
     A device whose owner asked for it back ("Return Requested") never appears here, so it can never be disposed of.
 </p>
 
-<script>
-const search = document.getElementById('search');
-const rows = document.querySelectorAll('.device-row');
-search.addEventListener('input', () => {
-    let found = 0;
-    rows.forEach(row => {
-        const show = row.dataset.search.includes(search.value.toLowerCase().trim());
-        row.hidden = !show;
-        if (show) found++;
-    });
-    document.getElementById('empty').hidden = found > 0 || !rows.length;
-});
-</script>
 
 <?php require '../includes/officer_bottom.php'; ?>

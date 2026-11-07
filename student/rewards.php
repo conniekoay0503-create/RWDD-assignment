@@ -14,7 +14,7 @@ require '../includes/rewards_actions.php';
 
 $earn_rules = [
     ['recycle', 'Your device is recycled', 'You earn the basic points (× 1) when the officer recycles it.'],
-    ['wrench',  'Your device is repaired', 'You earn DOUBLE points (× 2), because a repaired device keeps being used.'],
+    ['wrench',  'Your device is repaired', 'You earn DOUBLE points (× 2) when you collect it and press "Confirm Collection", because a repaired device keeps being used.'],
     ['flag',    'You finish a challenge',  'Reach a challenge target before it ends to earn its bonus points.'],
 ];
 

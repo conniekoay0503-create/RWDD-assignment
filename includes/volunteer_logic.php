@@ -247,15 +247,16 @@ function vol_change_status($conn, $device_id, $me, $from, $to, $remark, $notif_t
         }
         vol_log_status($conn, $device_id, $me, $to, $remark);
 
-        // Repaired: the owner earns x2 and the volunteer earns x1, in the SAME transaction as the status change.
+        // Repaired: the VOLUNTEER earns x1 now, in the SAME transaction as the status change (the repair is done).
+        // The OWNER earns x2 only when they collect it ("Confirm Collection" in student/device-details.php):
+        // a device that is never collected (and is disposed of) earns the owner nothing, like the challenge rule.
         // The UNIQUE key (deviceID, tp_number) in points_transactions stops anyone being paid twice for one device.
         $text = str_replace('{device}', $dev['device_name'], $notif_text);
         if ($to === 'Ready for Collection') {
-            $owner_points = calc_points($dev['weight_kg'], $dev['multiplier'], $dev['max_points'], true);
-            $my_points    = calc_points($dev['weight_kg'], $dev['multiplier'], $dev['max_points'], false);
-            vol_add_points($conn, $dev['submitted_by'], $device_id, $owner_points, $dev['device_name'] . ' repaired');
+            $my_points = calc_points($dev['weight_kg'], $dev['multiplier'], $dev['max_points'], false);
             vol_add_points($conn, $me, $device_id, $my_points, 'Repaired ' . $dev['device_name']);
-            $text .= ' You earned ' . $owner_points . ' points.';
+            $text .= ' Collect it from the Green Hub and press "Confirm Collection" to earn '
+                   . calc_points($dev['weight_kg'], $dev['multiplier'], $dev['max_points'], true) . ' points.';
         }
         notify($conn, $dev['submitted_by'], $notif_title, $text);
         return [true, $dev['device_name']];
