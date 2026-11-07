@@ -66,12 +66,13 @@ require '../includes/volunteer_top.php';
         <div class="bar" style="margin: 0.3rem 0"><span style="width: <?= $bar ?>%"></span></div>
         <small><?= $affordable ? 'Enough for RM' . number_format((float) $affordable['cash_value'], 0) . ' cashback' : 'Keep earning to unlock cashback' ?></small>
     </a>
-    <div class="stat-card <?= $jobs ? 'has-work' : '' ?>">
+    <!-- A link: press the card to open My jobs (same as the Points balance card) -->
+    <a class="stat-card <?= $jobs ? 'has-work' : '' ?>" href="my_jobs.php">
         <span class="stat-icon tint-sky"><?= icon('wrench') ?></span>
         <span class="stat-value"><?= count($jobs) ?></span>
         <span class="stat-title">Open jobs</span>
         <small>waiting for you</small>
-    </div>
+    </a>
     <div class="stat-card">
         <span class="stat-icon tint-mint"><?= icon('check') ?></span>
         <span class="stat-value"><?= $stats['rate'] === null ? '–' : (int) $stats['rate'] . '<small>%</small>' ?></span>
