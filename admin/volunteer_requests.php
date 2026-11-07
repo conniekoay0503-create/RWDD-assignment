@@ -23,13 +23,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'revie
         $student = db_value($conn, "SELECT tp_number FROM volunteer_request WHERE requestID = ?", 's', [$requestID]);
 
         if ($decision === 'approved') {
+            // A student with devices still in progress cannot change role yet (see open_devices_count())
+            $open = open_devices_count($conn, $student);
+            if ($open > 0) {
+                throw new Exception('This student still has ' . $open . ' device(s) in progress. Approve the request after they are finished.');
+            }
             // A user has exactly one role: remove the student role, then add the volunteer role
             $deleted = db_exec($conn, "DELETE FROM students WHERE tp_number = ?", 's', [$student]);
             if ($deleted !== 1) {
                 throw new Exception('This user is no longer a student, so the request cannot be approved.');
             }
             db_exec($conn, "INSERT INTO volunteers (tp_number, assigned_by) VALUES (?, ?)", 'ss', [$student, $me]);
-            notify($conn, $student, 'Request approved', 'You are now a Repair Volunteer. Please log in again to open your volunteer dashboard.', $me);
+            notify($conn, $student, 'Request approved', 'You are now a Repair Volunteer. Refresh the page to open your volunteer dashboard.', $me);
         } else {
             notify($conn, $student, 'Request rejected', 'Your volunteer request was not approved this time.', $me);
         }

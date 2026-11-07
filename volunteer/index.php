@@ -58,12 +58,12 @@ require '../includes/volunteer_top.php';
     <span class="hero-art" aria-hidden="true"><?= icon('recycle') ?></span>
 </section>
 
-<div class="stat-grid" style="margin-top: 1.25rem">
+<div class="stat-grid mt-lg">
     <a class="stat-card" href="points.php">
         <span class="stat-icon tint-gold"><?= icon('wallet') ?></span>
         <span class="stat-value"><?= $balance ?><small>pts</small></span>
         <span class="stat-title">Points balance</span>
-        <div class="bar" style="margin: 0.3rem 0"><span style="width: <?= $bar ?>%"></span></div>
+        <div class="bar my-xs"><span style="width: <?= $bar ?>%"></span></div>
         <small><?= $affordable ? 'Enough for RM' . number_format((float) $affordable['cash_value'], 0) . ' cashback' : 'Keep earning to unlock cashback' ?></small>
     </a>
     <!-- A link: press the card to open My jobs (same as the Points balance card) -->
@@ -110,7 +110,7 @@ require '../includes/volunteer_top.php';
                                   : 'The owner wants it back. Put it at the counter.') ?>
                             </small>
                         </div>
-                        <a class="btn btn-primary btn-sm" style="margin-left: auto" href="my_jobs.php#job-<?= e($j['deviceID']) ?>">Open</a>
+                        <a class="btn btn-primary btn-sm ml-auto" href="my_jobs.php#job-<?= e($j['deviceID']) ?>">Open</a>
                     </li>
                 <?php endforeach; ?>
             </ul>
@@ -129,7 +129,7 @@ require '../includes/volunteer_top.php';
                             <strong><?= e($d['device_name']) ?></strong>
                             <small class="muted"><?= e($d['deviceID']) ?> · <?= e($d['category_name']) ?></small>
                         </div>
-                        <span class="badge <?= (int) $d['days_left'] <= 1 ? 'badge-urgent' : ((int) $d['days_left'] <= 3 ? 'badge-warn' : 'badge-ok') ?>" style="margin-left: auto"><?= e(vol_days_left_text($d['days_left'])) ?></span>
+                        <span class="badge <?= (int) $d['days_left'] <= 1 ? 'badge-urgent' : ((int) $d['days_left'] <= 3 ? 'badge-warn' : 'badge-ok') ?> ml-auto"><?= e(vol_days_left_text($d['days_left'])) ?></span>
                     </li>
                 <?php endforeach; ?>
             </ul>
@@ -146,7 +146,7 @@ require '../includes/volunteer_top.php';
             <?php foreach ($announcements as $a): ?>
                 <div>
                     <strong><?= e($a['title']) ?></strong>
-                    <p class="muted" style="margin: 0.2rem 0"><?= e($a['message']) ?></p>
+                    <p class="muted my-xs"><?= e($a['message']) ?></p>
                     <small class="muted"><?= nice_date($a['created_at']) ?></small>
                 </div>
             <?php endforeach; ?>

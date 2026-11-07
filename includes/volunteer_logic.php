@@ -11,7 +11,7 @@
  * Our IDs are strings like 'D009', so most of them are 's'.
  */
 
-const VOL_QUEUE_DAYS = 7;   // an unclaimed device goes back to its owner after this many days
+// An unclaimed device goes back to its owner after DEADLINE_DAYS (functions.php), the same 7 days as every other deadline.
 
 // Words used in the statistics (our own definitions - say them in the presentation):
 //   fixed     = the repair worked: 'Ready for Collection' or 'Completed'
@@ -34,11 +34,7 @@ function vol_valid_device_id($id)
     return is_string($id) && preg_match('/^D\d{3,7}$/', $id) === 1;
 }
 
-/* CSS class of a status badge. The team stylesheet already has .status-in-repair etc. */
-function vol_status_class($status)
-{
-    return 'status-' . strtolower(str_replace(' ', '-', $status));
-}
+/* The badge colour class is status_class() in functions.php (shared by every role). */
 
 /* Weight for display: 0.2 -> "0.2 kg", NULL -> a dash */
 function vol_kg($value)
@@ -70,32 +66,22 @@ function vol_days_left_text($days)
 /*
  * Run $work inside ONE database transaction (all writes succeed together, or none do).
  * $work returns [true|false, message]. false = a normal "no" (e.g. someone claimed it first),
- * so we roll back and pass the message on.
- *
- * Retry: IDs like 'H082' come from next_id() (biggest number + 1). If two volunteers
- * click at the very same moment they may get the same number, and MySQL answers with
- * "Duplicate entry" (error 1062). Then we simply run the transaction again.
+ * so we roll back and pass the message on. Same begin / commit / rollback as the other team pages.
  */
 function vol_transaction($conn, callable $work)
 {
-    for ($attempt = 1; ; $attempt++) {
-        $conn->begin_transaction();
-        try {
-            $result = $work();
-            if ($result[0] === true) {
-                $conn->commit();
-            } else {
-                $conn->rollback();
-            }
-            return $result;
-        } catch (Throwable $ex) {
+    $conn->begin_transaction();
+    try {
+        $result = $work();
+        if ($result[0] === true) {
+            $conn->commit();
+        } else {
             $conn->rollback();
-            $duplicate = $ex->getCode() === 1062 || stripos($ex->getMessage(), 'Duplicate entry') !== false
-                      || stripos($ex->getMessage(), 'UNIQUE constraint failed') !== false;
-            if (!$duplicate || $attempt >= 3) {
-                throw $ex;
-            }
         }
+        return $result;
+    } catch (Throwable $ex) {
+        $conn->rollback();
+        throw $ex;
     }
 }
 
@@ -119,7 +105,7 @@ function vol_log_status($conn, $device_id, $changed_by, $new_status, $remarks)
  */
 function vol_return_expired($conn)
 {
-    $days = (int) VOL_QUEUE_DAYS;   // our own constant, not user input, so it is safe inside the SQL text
+    $days = (int) DEADLINE_DAYS;   // our own constant, not user input, so it is safe inside the SQL text
     $expired = db_all($conn,
         "SELECT deviceID, submitted_by, device_name FROM devices
           WHERE status = 'Dropped Off' AND claimed_by IS NULL
@@ -148,7 +134,7 @@ function vol_return_expired($conn)
 /* Dropped-off devices nobody has claimed, oldest first. A volunteer never sees their own device. */
 function vol_queue($conn, $me)
 {
-    $days = (int) VOL_QUEUE_DAYS;
+    $days = (int) DEADLINE_DAYS;
     return db_all($conn,
         "SELECT d.deviceID, d.device_name, d.fault_description, d.photo_path, d.weight_kg,
                 d.status_changed_at, c.category_name,
@@ -168,7 +154,7 @@ function vol_queue($conn, $me)
  */
 function vol_claim($conn, $device_id, $me)
 {
-    $days = (int) VOL_QUEUE_DAYS;
+    $days = (int) DEADLINE_DAYS;
     return vol_transaction($conn, function () use ($conn, $device_id, $me, $days) {
         $changed = db_exec($conn,
             "UPDATE devices SET status = 'Claimed', claimed_by = ?, status_changed_at = NOW()
@@ -187,7 +173,7 @@ function vol_claim($conn, $device_id, $me)
 /* Numbers for the red badges on the navigation bar */
 function vol_nav_counts($conn, $me)
 {
-    $days = (int) VOL_QUEUE_DAYS;
+    $days = (int) DEADLINE_DAYS;
     return [
         'queue' => (int) db_value($conn,
             "SELECT COUNT(*) FROM devices WHERE status = 'Dropped Off' AND claimed_by IS NULL AND submitted_by <> ?
@@ -386,16 +372,7 @@ function vol_current_challenge($conn)
     return null;
 }
 
-/* kg of finished devices (repaired = Completed, or Recycled) inside the challenge dates. $me = only my devices */
-function vol_challenge_kg($conn, $ch, $me = null)
-{
-    $sql = "SELECT COALESCE(SUM(weight_kg), 0) FROM devices
-             WHERE status IN ('Completed', 'Recycled') AND weight_kg IS NOT NULL
-               AND DATE(status_changed_at) BETWEEN ? AND ?";
-    $types = 'ss'; $args = [$ch['start_date'], $ch['end_date']];
-    if ($me !== null) { $sql .= " AND claimed_by = ?"; $types .= 's'; $args[] = $me; }
-    return (float) db_value($conn, $sql, $types, $args);
-}
+/* The challenge kg rule is NOT here: it is challenge_kg() / challenge_summary() in functions.php (one rule for everyone). */
 
 /* Reward tiers for the Points page, cheapest first */
 function vol_rewards($conn)

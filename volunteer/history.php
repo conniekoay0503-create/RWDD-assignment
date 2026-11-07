@@ -43,7 +43,7 @@ page_head('history', 'Repair history', 'Every device you have claimed, newest fi
                         <td><strong><?= e($r['device_name']) ?></strong><br><small class="muted"><?= e($r['deviceID']) ?></small></td>
                         <td><?= e($r['category_name']) ?></td>
                         <td><?= e(vol_kg($r['weight_kg'])) ?></td>
-                        <td><span class="badge <?= e(vol_status_class($r['status'])) ?>"><?= e($r['status']) ?></span></td>
+                        <td><span class="badge <?= e(status_class($r['status'])) ?>"><?= e($r['status']) ?></span></td>
                         <td><?= nice_date($r['status_changed_at'], true) ?></td>
                     </tr>
                 <?php endforeach; ?>

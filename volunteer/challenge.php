@@ -1,8 +1,10 @@
 <?php
 /*
  * Challenge & rank (wireframe Figure 62)
- * A challenge is a CAMPUS-WIDE kg target (as drawn in the wireframe). The bonus itself is paid
- * by the admin / officer side; this page only shows the progress and the leaderboard.
+ * Challenges are for STUDENTS: each student who reaches target_kg with their own devices gets the bonus
+ * (the rule is challenge_kg() / challenge_summary() in functions.php, the same one the admin and student pages use).
+ * Volunteers do not get the challenge bonus, so this page only shows how the campus is doing,
+ * plus the volunteer leaderboard (lifetime points).
  */
 require '../config/db.php';
 require '../includes/functions.php';
@@ -13,14 +15,7 @@ $me = $_SESSION['tp_number'];
 $ch  = vol_current_challenge($conn);
 $all = vol_leaderboard($conn);
 
-$campus_kg = $my_kg = 0.0; $pct_me = $pct_others = 0;
-if ($ch) {
-    $campus_kg  = vol_challenge_kg($conn, $ch);
-    $my_kg      = vol_challenge_kg($conn, $ch, $me);
-    $target     = max(0.01, (float) $ch['target_kg']);
-    $pct_me     = (int) min(100, round($my_kg * 100 / $target));
-    $pct_others = (int) min(100 - $pct_me, round(max(0, $campus_kg - $my_kg) * 100 / $target));
-}
+$sum = $ch ? challenge_summary($conn, $ch) : null;   // ['kg', 'reached', 'students']
 
 // Top 10, plus my own row if I am lower down
 $top = array_slice($all, 0, 10);
@@ -41,18 +36,17 @@ if ($ch) {
 ?>
 
 <?php if ($ch): ?>
-<section class="card">
-    <small class="muted">Campus total</small>
-    <p class="big-num"><?= e(vol_kg_number($campus_kg)) ?> <small class="muted">/ <?= e(vol_kg_number($ch['target_kg'])) ?> kg</small></p>
-    <div class="v-multibar" role="img" aria-label="Campus progress: you <?= $pct_me ?>%, everyone else <?= $pct_others ?>%">
-        <span class="v-seg-me" style="width: <?= $pct_me ?>%"></span><span class="v-seg-others" style="width: <?= $pct_others ?>%"></span>
-    </div>
-    <p class="v-legend">
-        <span><i class="v-dot v-dot-me"></i> You: <strong><?= e(vol_kg_number($my_kg)) ?> kg</strong></span>
-        <span><i class="v-dot v-dot-others"></i> Everyone else</span>
-    </p>
-    <p style="margin: 0">Reach <?= e(vol_kg_number($ch['target_kg'])) ?> kg by <?= e(nice_date($ch['end_date'])) ?> and everyone with a repaired or recycled device in this window gets <strong>+<?= (int) $ch['bonus_points'] ?> bonus points</strong>.</p>
+<section class="stat-grid four">
+    <div class="stat-card row"><span class="stat-icon tint-sky"><?= icon('target') ?></span><div><strong class="stat-value"><?= e(vol_kg_number($ch['target_kg'])) ?><small>kg</small></strong><span class="stat-title">Target per student</span></div></div>
+    <div class="stat-card row"><span class="stat-icon tint-gold"><?= icon('star') ?></span><div><strong class="stat-value">+<?= (int) $ch['bonus_points'] ?></strong><span class="stat-title">Bonus per student</span></div></div>
+    <div class="stat-card row"><span class="stat-icon tint-mint"><?= icon('users') ?></span><div><strong class="stat-value"><?= (int) $sum['reached'] ?></strong><span class="stat-title">Students reached it</span></div></div>
+    <div class="stat-card row"><span class="stat-icon tint-mint"><?= icon('leaf') ?></span><div><strong class="stat-value"><?= e(vol_kg_number($sum['kg'])) ?><small>kg</small></strong><span class="stat-title">Campus total</span></div></div>
 </section>
+<p class="muted">
+    This challenge is for students: each student whose own devices reach
+    <?= e(vol_kg_number($ch['target_kg'])) ?> kg (repaired or recycled) between <?= e(nice_date($ch['start_date'])) ?>
+    and <?= e(nice_date($ch['end_date'])) ?> gets the bonus. Volunteers do not get it, but every device you fix helps a student get there.
+</p>
 <?php endif; ?>
 
 <section class="card">

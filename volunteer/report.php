@@ -86,7 +86,7 @@ require '../includes/report_head.php';   // same report top as the admin Reports
                     <td><strong><?= e($d['device_name']) ?></strong><br><small class="muted"><?= e($d['deviceID']) ?></small></td>
                     <td><?= e($d['category_name']) ?></td>
                     <td><?= e(nice_date($d['claimed_at'])) ?></td>
-                    <td><span class="badge <?= e(vol_status_class($d['status'])) ?>"><?= e($d['status']) ?></span></td>
+                    <td><span class="badge <?= e(status_class($d['status'])) ?>"><?= e($d['status']) ?></span></td>
                     <td><?= e(vol_kg($d['weight_kg'])) ?></td>
                     <td class="v-num"><?= $d['earned'] === null ? '–' : '+' . (int) $d['earned'] ?></td>
                 </tr>

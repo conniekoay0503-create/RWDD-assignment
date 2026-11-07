@@ -165,10 +165,10 @@ function vol_err($errors, $key) { return isset($errors[$key]) ? '<small class="f
         <section class="tab-panel" id="account" hidden>
             <h2 class="card-title"><?= icon('id') ?> Account</h2>
             <div class="pref-row">
-                <div><strong>Status</strong><p class="muted" style="margin: 0"><?= $user['is_active'] ? 'Active volunteer, can claim devices' : 'Inactive account, cannot claim devices' ?></p></div>
+                <div><strong>Status</strong><p class="muted m-0"><?= $user['is_active'] ? 'Active volunteer, can claim devices' : 'Inactive account, cannot claim devices' ?></p></div>
             </div>
             <div class="pref-row">
-                <div><strong>Signed in as</strong><p class="muted" style="margin: 0"><?= e($user['email']) ?></p></div>
+                <div><strong>Signed in as</strong><p class="muted m-0"><?= e($user['email']) ?></p></div>
                 <a class="btn btn-outline" href="../logout.php" data-confirm="Log out now?"><?= icon('logout') ?> Log out</a>
             </div>
         </section>

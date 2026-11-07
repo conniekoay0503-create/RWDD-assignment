@@ -34,7 +34,7 @@ $active = 'queue';
 require '../includes/volunteer_top.php';
 
 page_head('inbox', 'Repair queue',
-    'Oldest first. Unclaimed devices go back to their owner after ' . VOL_QUEUE_DAYS . ' days.',
+    'Oldest first. Unclaimed devices go back to their owner after ' . DEADLINE_DAYS . ' days.',
     '<span class="badge badge-ok">' . count($devices) . ' waiting</span>');
 ?>
 
@@ -58,10 +58,10 @@ page_head('inbox', 'Repair queue',
                     </div>
                 </div>
                 <span class="badge <?= $badge ?>"><?= icon('clock') ?> <?= e(vol_days_left_text($left)) ?></span>
-                <p style="margin: 0"><?= e($d['fault_description']) ?></p>
+                <p class="m-0"><?= e($d['fault_description']) ?></p>
                 <footer>
                     <small class="muted"><?= icon('calendar') ?> Dropped off <?= e(date('j M', strtotime($d['status_changed_at']))) ?></small>
-                    <form method="post" action="repair_queue.php" data-confirm="Claim this device? You must collect it from the Green Hub." style="margin-left: auto">
+                    <form method="post" action="repair_queue.php" data-confirm="Claim this device? You must collect it from the Green Hub." class="ml-auto">
                         <?= csrf_field() ?>
                         <input type="hidden" name="device_id" value="<?= e($d['deviceID']) ?>">
                         <button type="submit" class="btn btn-primary btn-sm">Claim</button>

@@ -5,7 +5,8 @@
  * (A device nobody claimed in 7 days is turned into 'Returned Unclaimed' automatically by require_role().)
  *
  * Two actions:
- *   notify  - remind a volunteer to follow up (at most once a day per device)
+ *   remind  - send the OWNER a reminder to collect the device (at most once a day per device).
+ *             The owner is the one who must come, so the reminder goes to the owner, not to a volunteer.
  *   dispose - the owner never came: the officer disposes of it (status 'Disposed').
  *             Allowed only for devices in this list, so a 'Return Requested' device can never be disposed:
  *             that owner has asked for it back.
@@ -19,14 +20,7 @@ $me = $_SESSION['tp_number'];
 $error = '';
 $where = overdue_sql(WAITING_FOR_OWNER, 'd.');
 $methods = ['Certified e-waste recycler', 'Battery take-back programme', 'Metal recovery', 'Harvest parts for repair stock'];
-
-$volunteers = db_all($conn, "
-    SELECT u.tp_number, u.name
-    FROM volunteers v
-    JOIN users u ON v.tp_number = u.tp_number
-    WHERE u.is_active = 1
-    ORDER BY u.name
-");
+$remind_title = 'Collection reminder: ';   // + deviceID. The same title is used to find the last reminder.
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -41,30 +35,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$device) {
         $error = 'This device is not in the overdue list any more.';
 
-    } elseif ($action === 'notify') {
-        $tp = $_POST['volunteerTP'] ?? '';
-        $volunteer = db_one($conn, "
-            SELECT v.tp_number
-            FROM volunteers v
-            JOIN users u ON v.tp_number = u.tp_number
-            WHERE v.tp_number = ? AND u.is_active = 1
-        ", 's', [$tp]);
+    } elseif ($action === 'remind') {
+        $owner = $device['submitted_by'];
+        $title = $remind_title . $id;
 
-        $title = 'Device Follow-up: ' . $id;
+        // Only one reminder per device every 24 hours, so the owner is not spammed
         $duplicate = db_value($conn, "
             SELECT COUNT(*) FROM notifications
             WHERE tp_number = ? AND title = ?
             AND created_at >= NOW() - INTERVAL 1 DAY
-        ", 'ss', [$tp, $title]);
+        ", 'ss', [$owner, $title]);
 
-        if (!$volunteer) {
-            $error = 'Please choose a volunteer.';
-        } elseif ($duplicate) {
-            $error = 'Volunteer already notified within 24 hours.';
+        if ($duplicate) {
+            $error = 'The owner was already reminded in the last 24 hours.';
         } else {
-            notify($conn, $tp, $title, "Please follow up on {$device['device_name']} ($id). "
-                                    . "Current status: {$device['status']}.");
-            set_flash('success', 'Volunteer notified successfully.');
+            notify($conn, $owner, $title, "Please collect your {$device['device_name']} ($id) from the Green Hub. "
+                . "It is past the " . DEADLINE_DAYS . "-day collection deadline. If it is not collected, it may be disposed of.");
+            set_flash('success', 'Reminder sent to the owner.');
             redirect('abandoned_devices.php');
         }
 
@@ -103,15 +90,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// last_reminded = when the officer last pressed "Remind owner" for this device (NULL = never)
 $devices = db_all($conn, "
     SELECT d.deviceID, d.device_name, d.status, d.recycle_consent,
            d.claimed_by, u.name AS student_name,
-           DATE_ADD(d.status_changed_at, INTERVAL " . DEADLINE_DAYS . " DAY) AS deadline
+           DATE_ADD(d.status_changed_at, INTERVAL " . DEADLINE_DAYS . " DAY) AS deadline,
+           (SELECT MAX(n.created_at) FROM notifications n
+             WHERE n.tp_number = d.submitted_by AND n.title = CONCAT(?, d.deviceID)) AS last_reminded
     FROM devices d
     JOIN users u ON d.submitted_by = u.tp_number
     WHERE $where
     ORDER BY d.status_changed_at
-");
+", 's', [$remind_title]);
 
 $unclaimed = count(array_filter($devices, fn($d) => $d['status'] === 'Returned Unclaimed'));
 $uncollected = count($devices) - $unclaimed;
@@ -120,7 +110,7 @@ $page_title = 'Abandoned Devices';
 $active = 'devices';
 require '../includes/officer_top.php';
 officer_page_head('clock', 'Abandoned Devices',
-    'Devices waiting at the Green Hub for more than ' . DEADLINE_DAYS . ' days. Remind a volunteer, or dispose of the device.');
+    'Devices waiting at the Green Hub for more than ' . DEADLINE_DAYS . ' days. Remind the owner, or dispose of the device.');
 ?>
 
 <?php if ($error): ?>
@@ -173,21 +163,16 @@ officer_page_head('clock', 'Abandoned Devices',
                     <td>Passed (<?= nice_date($d['deadline']) ?>)</td>
                     <td class="action-forms">
                         <!-- Each action = one line: choose from the list, then press the button -->
-                        <form method="post" data-confirm="Notify this Volunteer?">
+                        <form method="post" data-confirm="Send <?= e($d['student_name']) ?> a reminder to collect <?= e($d['device_name']) ?>?">
                             <?= csrf_field() ?>
-                            <input type="hidden" name="action" value="notify">
+                            <input type="hidden" name="action" value="remind">
                             <input type="hidden" name="deviceID" value="<?= e($d['deviceID']) ?>">
-                            <select name="volunteerTP" required>
-                                <option value="">Select Volunteer</option>
-                                <?php foreach ($volunteers as $v): ?>
-                                    <option value="<?= e($v['tp_number']) ?>"
-                                        <?= $v['tp_number'] === $d['claimed_by'] ? 'selected' : '' ?>>
-                                        <?= e($v['name']) ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
+                            <!-- Where the other line has its list, this line shows when the owner was last reminded -->
+                            <small class="remind-note muted">
+                                <?= $d['last_reminded'] ? 'Last reminded ' . e(nice_date($d['last_reminded'], true)) : 'Not reminded yet' ?>
+                            </small>
                             <button class="btn btn-primary" type="submit">
-                                <?= icon('bell') ?> Notify
+                                <?= icon('bell') ?> Remind owner
                             </button>
                         </form>
                         <form method="post" data-confirm="Dispose of <?= e($d['device_name']) ?>? The owner did not collect it. This cannot be undone.">

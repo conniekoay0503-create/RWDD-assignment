@@ -128,9 +128,9 @@ Who changes what:
 
 Every status change also INSERTs one row into `device_status_history` (the timeline), and **whoever changes the status calls `notify()` at that moment** to tell the owner.
 
-**7-day rules.** XAMPP has no scheduler, so `require_role()` checks them every time a page opens. The rule is written **once**, in `functions.php` (`DEADLINE_DAYS`, `WAITING_FOR_OWNER`, `WAITING_FOR_ACTION`, `overdue_sql()`), and every page uses it:
+**7-day rules.** XAMPP has no scheduler, so `require_role()` checks them when a page opens (at most once every 5 minutes per user, a *throttle*, so the pages stay fast). The rule is written **once**, in `functions.php` (`DEADLINE_DAYS`, `WAITING_FOR_OWNER`, `WAITING_FOR_ACTION`, `overdue_sql()`), and every page uses it:
 - **WAITING_FOR_OWNER** (Ready for Collection, Returned Unrepaired, Returned Unclaimed) for more than 7 days: overdue. `check_collection_deadlines()` notifies the owner, the admins and the officers (once), and the device appears on the officer's Abandoned Devices page, where it can be disposed of.
-- **WAITING_FOR_ACTION** (Pending Consent, Return Requested) for more than 7 days: also overdue on the admin dashboard. These are never on the Abandoned Devices page, so a Return Requested device can **never** be disposed of: the student has asked for it back.
+- **WAITING_FOR_ACTION** (Pending Consent, Return Requested) for more than 7 days: also overdue on the admin dashboard. `check_collection_deadlines()` reminds the person who must act (once): the owner for Pending Consent (recycle or return?), the volunteer for Return Requested (bring it to the counter). These are never on the Abandoned Devices page, so a Return Requested device can **never** be disposed of: the student has asked for it back.
 - Dropped off but not claimed within 7 days: becomes Returned Unclaimed (`vol_return_expired()`).
 
 ## 5. Points and cashback
@@ -150,7 +150,9 @@ When the points are given:
 - **Recycled**: when the officer confirms recycling: the owner × 1.
 - The UNIQUE key `(deviceID, tp_number)` in `points_transactions` stops anyone being paid twice for one device.
 
-**Challenges:** a device counts when it is repaired and collected, or recycled, during the challenge (`CHALLENGE_STATUSES`, `challenge_kg()` in `functions.php`; the student page uses the same rule). After a challenge ends, the admin presses **Award bonus** on the Challenges page. Every student who reached the target gets the bonus once (the UNIQUE key `(challengeID, tp_number)` stops a second one).
+**Challenges:** a device counts when it is repaired and collected, or recycled, during the challenge (`CHALLENGE_STATUSES`, `challenge_kg()` in `functions.php`; the student page uses the same rule). After a challenge ends, the admin presses **Award bonus** on the Challenges page. Every student who reached the target gets the bonus once (the UNIQUE key `(challengeID, tp_number)` stops a second one). The target is **per student** and the bonus is **for students only**; the volunteer Challenge page just shows the campus numbers from `challenge_summary()` (same rule).
+
+**Changing role.** A student becomes a volunteer (approved request) or an officer (Assign officer) only when none of their devices is still in progress (`open_devices_count()`, `FINISHED_STATUSES`). Otherwise the device would get stuck: only the student pages let the owner choose recycle / return or confirm collection.
 
 Example: Phone / Tablet, multiplier 500, max 300. A 0.2 kg phone is worth 0.2 × 500 = 100 points, or 200 if it is repaired.
 

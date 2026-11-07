@@ -17,12 +17,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         set_flash('error', 'Please enter a valid TP number, e.g. TP012345.');
     } elseif (db_value($conn, "SELECT COUNT(*) FROM students WHERE tp_number = ?", 's', [$tp]) == 0) {
         set_flash('error', 'Only an existing Student account can be assigned as an Officer.');
+    } elseif (($open = open_devices_count($conn, $tp)) > 0) {
+        // A student with devices still in progress cannot change role yet (see open_devices_count())
+        set_flash('error', $tp . ' still has ' . $open . ' device(s) in progress. Assign them after the devices are finished.');
     } else {
         $conn->begin_transaction();
         try {
             db_exec($conn, "DELETE FROM students WHERE tp_number = ?", 's', [$tp]);
             db_exec($conn, "INSERT INTO officers (tp_number, assigned_by) VALUES (?, ?)", 'ss', [$tp, $me]);
-            notify($conn, $tp, 'New role', 'You are now a Recycling Officer. Please log in again to open your officer dashboard.', $me);
+            notify($conn, $tp, 'New role', 'You are now a Recycling Officer. Refresh the page to open your officer dashboard.', $me);
             $conn->commit();
             set_flash('success', $tp . ' is now a Recycling Officer.');
         } catch (mysqli_sql_exception $ex) {

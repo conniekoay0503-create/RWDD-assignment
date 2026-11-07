@@ -135,7 +135,7 @@ officer_page_head(
                 </select>
             </div>
 
-            <div class="card" style="margin:20px 0;">
+            <div class="card my-lg">
                 <p class="muted">Estimated Student Points</p>
 
                 <h2 id="pointsResult">0 points</h2>
@@ -158,7 +158,7 @@ officer_page_head(
                 </a>
             </div>
 
-            <p class="muted" style="margin-top:16px;">
+            <p class="muted mt-md">
                 Confirming will update the device status,
                 record the weight and disposal method,
                 award student points, and send a notification.

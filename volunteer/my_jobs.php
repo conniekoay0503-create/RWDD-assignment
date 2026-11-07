@@ -110,9 +110,9 @@ page_head('wrench', 'My jobs', "Devices you've claimed. Only you can update them
                 <div>
                     <small class="muted"><?= $dom ?> · <?= e($j['category_name']) ?></small>
                     <h2><?= e($j['device_name']) ?></h2>
-                    <p style="margin: 0"><?= e($j['fault_description']) ?></p>
+                    <p class="m-0"><?= e($j['fault_description']) ?></p>
                 </div>
-                <span class="badge <?= e(vol_status_class($status)) ?>"><?= e($status) ?></span>
+                <span class="badge <?= e(status_class($status)) ?>"><?= e($status) ?></span>
             </header>
 
             <div class="v-job-body">
@@ -163,7 +163,7 @@ page_head('wrench', 'My jobs', "Devices you've claimed. Only you can update them
                             <textarea id="note-<?= $dom ?>" name="note" rows="3" maxlength="<?= VOL_NOTE_MAX ?>"
                                       placeholder="What did you find out or try? The owner can read this."></textarea>
                         </div>
-                        <div class="btn-row" style="margin-top: 0">
+                        <div class="btn-row mt-0">
                             <button type="submit" name="action" value="note" class="btn btn-outline"><?= icon('edit') ?> Add note</button>
                             <button type="submit" name="action" value="fixed" class="btn btn-primary"
                                     onclick="return confirm('Mark this device as fixed? The owner will be told to collect it.');"><?= icon('check') ?> Mark as fixed</button>

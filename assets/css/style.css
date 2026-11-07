@@ -984,7 +984,8 @@ tr.is-me td { background: var(--primary-soft); }
 .action-forms form { display: flex; align-items: center; gap: 0.5rem; }
 .action-forms form + form { margin-top: 0.5rem; }
 .action-forms select { flex: 1; min-width: 0; padding-block: 0.45rem; }
-.action-forms .btn { width: 8rem; flex-shrink: 0; justify-content: center; }
+.action-forms .btn { width: 9.5rem; flex-shrink: 0; justify-content: center; }
+.action-forms .remind-note { flex: 1; min-width: 0; }   /* takes the place of the list, so both buttons line up */
 
 /* ============================================================
    15. Volunteer pages (moved here from volunteer.css)
@@ -1021,14 +1022,7 @@ tr.is-me td { background: var(--primary-soft); }
 .v-num { text-align: right; white-space: nowrap; }
 .v-neg { color: var(--danger); }
 
-/* ---- Challenge: one bar split into "you" and "everyone else" + leaderboard ---- */
-.v-multibar { display: flex; height: 0.9rem; border-radius: 999px; overflow: hidden; background: var(--surface-2); }
-.v-seg-me { background: var(--primary); }
-.v-seg-others { background: var(--sun-hover); }
-.v-legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem; margin: 0.6rem 0 0; color: var(--muted); font-size: 0.9rem; }
-.v-dot { display: inline-block; width: 0.7rem; height: 0.7rem; border-radius: 50%; margin-right: 0.3rem; }
-.v-dot-me { background: var(--primary); }
-.v-dot-others { background: var(--sun-hover); }
+/* ---- Challenge: volunteer leaderboard ---- */
 .v-leaders { list-style: none; margin: 0.5rem 0 0; padding: 0; display: grid; gap: 0.25rem; }
 .v-leaders li { display: flex; align-items: center; gap: 0.9rem; padding: 0.55rem 0.75rem; border-radius: 12px; }
 .v-leaders li.you { background: var(--primary-soft); font-weight: 600; }
@@ -1040,3 +1034,16 @@ tr.is-me td { background: var(--primary-soft); }
     .v-job-body { grid-template-columns: 1fr; }
     .v-job-head { flex-direction: column; }
 }
+
+/* ============================================================
+   16. Small spacing helpers (instead of style="..." inside the HTML)
+   They are the last rules in the file, so they win over the rules above.
+   ============================================================ */
+.m-0     { margin: 0; }
+.mt-0    { margin-top: 0; }
+.mt-md   { margin-top: 1rem; }
+.mt-lg   { margin-top: 1.25rem; }
+.my-xs   { margin-block: 0.25rem; }
+.my-lg   { margin-block: 1.25rem; }
+.ml-auto { margin-left: auto; }               /* pushes the item to the right end of a flex row */
+.grow    { flex: 1; min-width: 0; }           /* takes the free space in a flex row */

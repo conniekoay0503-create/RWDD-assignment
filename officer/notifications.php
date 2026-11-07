@@ -118,7 +118,7 @@ require '../includes/officer_top.php';
                     <?= icon((int)$n['is_read'] ? 'check' : 'bell') ?>
                 </span>
 
-                <div style="flex:1;min-width:0">
+                <div class="grow">
                     <strong><?= e($n['title']) ?></strong>
                     <?php if (!(int)$n['is_read']): ?>
                         <span class="badge">New</span>

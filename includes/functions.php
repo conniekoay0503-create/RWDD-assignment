@@ -246,6 +246,18 @@ const DEADLINE_DAYS = 7;   // a device may wait this many days before it counts 
 const WAITING_FOR_OWNER = ['Ready for Collection', 'Returned Unrepaired', 'Returned Unclaimed'];
 // Someone must decide or act: the owner (recycle or return?) or the volunteer (take it to the counter)
 const WAITING_FOR_ACTION = ['Pending Consent', 'Return Requested'];
+// The device is finished: nothing more will happen to it
+const FINISHED_STATUSES = ['Cancelled', 'Completed', 'Collected Unrepaired', 'Recycled', 'Disposed'];
+
+// How many of this student's devices are NOT finished yet.
+// Used before a student becomes a volunteer / officer: the student pages are the only place where the
+// owner can choose "recycle or return" or press "Confirm collection", so those devices would get stuck.
+function open_devices_count($conn, $tp_number)
+{
+    return (int) db_value($conn,
+        "SELECT COUNT(*) FROM devices WHERE submitted_by = ? AND status NOT IN (" . sql_list(FINISHED_STATUSES) . ")",
+        's', [$tp_number]);
+}
 
 // ['A', 'B'] -> 'A', 'B'  for an SQL IN (...) list.
 // Only use it with our own constants (never with text typed by a user), so it is safe inside the SQL.
@@ -275,6 +287,30 @@ function challenge_kg($conn, $challenge, $tp_number)
           WHERE submitted_by = ? AND status IN (" . sql_list(CHALLENGE_STATUSES) . ")
             AND status_changed_at >= ? AND status_changed_at < DATE_ADD(?, INTERVAL 1 DAY)",
         'sss', [$tp_number, $challenge['start_date'], $challenge['end_date']]);
+}
+
+// The whole campus in one challenge, with the SAME rule as challenge_kg():
+//   kg      = kg of all students' devices together (for information only)
+//   reached = how many students already reached the target (each of them gets the bonus)
+// The target is PER STUDENT, so the campus kg is not compared with the target.
+function challenge_summary($conn, $challenge)
+{
+    $per_student = db_all($conn,
+        "SELECT d.submitted_by, SUM(d.weight_kg) AS kg FROM devices d
+          JOIN students s ON s.tp_number = d.submitted_by
+          JOIN users u ON u.tp_number = d.submitted_by AND u.is_active = 1   -- same people as the admin's Award bonus
+          WHERE d.status IN (" . sql_list(CHALLENGE_STATUSES) . ")
+            AND d.status_changed_at >= ? AND d.status_changed_at < DATE_ADD(?, INTERVAL 1 DAY)
+          GROUP BY d.submitted_by",
+        'ss', [$challenge['start_date'], $challenge['end_date']]);
+
+    $kg = 0.0;
+    $reached = 0;
+    foreach ($per_student as $row) {
+        $kg += (float) $row['kg'];
+        if ((float) $row['kg'] >= (float) $challenge['target_kg']) $reached++;
+    }
+    return ['kg' => $kg, 'reached' => $reached, 'students' => count($per_student)];
 }
 
 /* ---------- CSRF protection (one token for the whole website) ---------- */
