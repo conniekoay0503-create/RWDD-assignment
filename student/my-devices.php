@@ -49,4 +49,4 @@ page_head('device', 'My Devices', 'Track every device you have submitted.',
     </table></div>
 </section>
 
-<?php require '../includes/student_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

@@ -24,4 +24,4 @@ $active = 'points';
 require '../includes/volunteer_top.php';
 page_head('gift', 'Rewards', 'Earn points for every device you repair, then swap them for APCard cashback.');
 require '../includes/rewards_view.php';
-require '../includes/volunteer_bottom.php';
+require '../includes/bottom.php';

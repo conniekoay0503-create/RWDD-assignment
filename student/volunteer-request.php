@@ -117,4 +117,4 @@ $badge = ['pending' => 'badge-warn', 'approved' => 'badge-ok', 'rejected' => 'ba
     </table></div>
 </section>
 
-<?php require '../includes/student_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

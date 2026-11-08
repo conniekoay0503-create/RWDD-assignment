@@ -54,10 +54,10 @@ includes/
   functions.php           Shared functions (see section 6)
   icons.php               icon('name') draws an SVG icon
   public_top.php          Top of the login / register pages
-  admin_top.php    admin_bottom.php      Top bar + menu / closing tags for admin pages
-  student_top.php  student_bottom.php    Same for student pages
-  officer_top.php  officer_bottom.php    Same for officer pages
-  volunteer_top.php  volunteer_bottom.php   Same for volunteer pages
+  admin_top.php    bottom.php      Top bar + menu / closing tags for admin pages
+  student_top.php  bottom.php    Same for student pages
+  officer_top.php  bottom.php    Same for officer pages
+  volunteer_top.php  bottom.php   Same for volunteer pages
   volunteer_logic.php                    Database functions used by the volunteer pages
   collection_deadlines.php               check_collection_deadlines(): sends "Overdue" notifications
 

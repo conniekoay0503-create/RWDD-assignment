@@ -26,4 +26,4 @@ $active = '';
 require '../includes/officer_top.php';
 officer_page_head('user', 'My profile', 'Your details and password.');
 require '../includes/profile_view.php';
-require '../includes/officer_bottom.php';
+require '../includes/bottom.php';

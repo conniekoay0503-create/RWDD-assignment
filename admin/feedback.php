@@ -46,4 +46,4 @@ page_head('message', 'Feedback inbox', 'What students say about their repair. Op
         </li>
     <?php endforeach; ?>
 </ul>
-<?php require '../includes/admin_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

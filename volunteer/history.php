@@ -53,4 +53,4 @@ page_head('history', 'Repair history', 'Every device you have claimed, newest fi
     <?php endif; ?>
 </section>
 
-<?php require '../includes/volunteer_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

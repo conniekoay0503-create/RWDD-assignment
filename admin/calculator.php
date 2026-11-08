@@ -65,4 +65,4 @@ page_head('calculator', 'Points calculator', 'Try a weight to see how many point
         </div>
     </div>
 </section>
-<?php require '../includes/admin_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

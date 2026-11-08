@@ -119,4 +119,4 @@ page_head('wallet', 'Cashback requests', 'Approve a request, then pay the amount
         </article>
     <?php endforeach; ?>
 </section>
-<?php require '../includes/admin_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

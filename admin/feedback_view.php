@@ -93,4 +93,4 @@ page_head('message', 'Feedback from ' . $view['name'], 'About ' . $view['device_
         </ol>
     </section>
 </div>
-<?php require '../includes/admin_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

@@ -223,4 +223,4 @@ officer_page_head('clock', 'Abandoned Devices',
 </p>
 
 
-<?php require '../includes/officer_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

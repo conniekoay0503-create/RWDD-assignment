@@ -170,4 +170,4 @@ search.addEventListener('input', filterQueue);
 category.addEventListener('change', filterQueue);
 </script>
 
-<?php require '../includes/officer_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

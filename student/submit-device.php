@@ -152,4 +152,4 @@ page_head('plus', 'Submit a Device', 'Register a broken device for repair or rec
     </form>
 </section>
 
-<?php require '../includes/student_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

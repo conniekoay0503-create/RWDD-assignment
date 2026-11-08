@@ -120,4 +120,4 @@ require '../includes/student_top.php';
     <?php endforeach; ?>
 </section>
 
-<?php require '../includes/student_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

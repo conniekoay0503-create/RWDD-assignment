@@ -113,4 +113,4 @@ page_head('user-plus', 'Assign a Recycling Officer', 'Officers handle recycling 
         <?php if (!$officers) empty_state('recycle', 'No officers yet.'); ?>
     </section>
 </div>
-<?php require '../includes/admin_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

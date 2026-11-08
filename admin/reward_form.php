@@ -94,4 +94,4 @@ page_head($edit ? 'edit' : 'plus', $edit ? 'Edit reward' : 'Add a reward', 'Stud
         </div>
     </form>
 </section>
-<?php require '../includes/admin_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

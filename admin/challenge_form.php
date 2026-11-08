@@ -136,4 +136,4 @@ page_head($edit ? 'edit' : 'plus', $edit ? 'Edit challenge' : 'Create a challeng
         </div>
     </form>
 </section>
-<?php require '../includes/admin_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

@@ -96,4 +96,4 @@ page_head('users', 'All users', 'Activate or deactivate accounts. Inactive users
     </div>
     <p class="muted empty-msg" hidden data-empty-for="user-table">No users match your search.</p>
 </section>
-<?php require '../includes/admin_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

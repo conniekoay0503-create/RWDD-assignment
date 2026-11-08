@@ -190,4 +190,4 @@ page_head('wrench', 'My jobs', "Devices you've claimed. Only you can update them
     <?php endforeach; ?>
 <?php endif; ?>
 
-<?php require '../includes/volunteer_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

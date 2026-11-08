@@ -59,4 +59,4 @@ page_head('gift', 'Rewards', 'What students can swap their points for.',
         </article>
     <?php endforeach; ?>
 </section>
-<?php require '../includes/admin_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

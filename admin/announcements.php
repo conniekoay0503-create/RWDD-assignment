@@ -61,4 +61,4 @@ page_head('megaphone', 'Announcements', 'News for everyone. They appear on every
         </article>
     <?php endforeach; ?>
 </section>
-<?php require '../includes/admin_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

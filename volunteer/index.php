@@ -154,4 +154,4 @@ require '../includes/volunteer_top.php';
     <?php endif; ?>
 </section>
 
-<?php require '../includes/volunteer_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

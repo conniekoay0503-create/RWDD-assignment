@@ -226,4 +226,4 @@ require '../includes/officer_top.php';
     </section>
 </div>
 
-<?php require '../includes/officer_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

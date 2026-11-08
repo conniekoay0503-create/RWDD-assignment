@@ -116,4 +116,4 @@ page_head('flag', 'Challenges', 'Each student who reaches the target with their 
         </article>
     <?php endforeach; ?>
 </section>
-<?php require '../includes/admin_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

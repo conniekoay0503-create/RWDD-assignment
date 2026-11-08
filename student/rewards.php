@@ -22,4 +22,4 @@ $page_title = 'Rewards';
 require '../includes/student_top.php';
 page_head('gift', 'Rewards', 'Earn points for every device you bring in, then swap them for APCard cashback.');
 require '../includes/rewards_view.php';
-require '../includes/student_bottom.php';
+require '../includes/bottom.php';

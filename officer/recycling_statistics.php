@@ -200,4 +200,4 @@ require '../includes/report_head.php';   // same report top as the admin Reports
 
 <?php endif; ?>
 
-<?php require '../includes/officer_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

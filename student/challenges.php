@@ -136,4 +136,4 @@ foreach ($leaders as $s) if ($s['tp_number'] === $tp) $myKg = (float)$s['kg'];
     </div>
 </div>
 
-<?php require '../includes/student_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

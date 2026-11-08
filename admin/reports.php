@@ -185,4 +185,4 @@ require '../includes/report_head.php';   // same report top as the student, offi
     <?php endif; ?>
 </article>
 <?php endif; ?>
-<?php require '../includes/admin_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

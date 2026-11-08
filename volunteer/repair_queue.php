@@ -72,4 +72,4 @@ page_head('inbox', 'Repair queue',
     </div>
 <?php endif; ?>
 
-<?php require '../includes/volunteer_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

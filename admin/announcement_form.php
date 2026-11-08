@@ -62,4 +62,4 @@ page_head($edit ? 'edit' : 'megaphone', $edit ? 'Edit announcement' : 'Post an a
         </div>
     </form>
 </section>
-<?php require '../includes/admin_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

@@ -45,4 +45,4 @@ page_head('bell', 'Notifications', 'The latest 50 messages for you.',
     <?php endif; ?>
 </section>
 
-<?php require '../includes/volunteer_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

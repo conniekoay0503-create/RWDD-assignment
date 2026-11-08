@@ -140,4 +140,4 @@ $me = mb_strtoupper(mb_substr($_SESSION['name'] ?? 'S', 0, 1));
     </div>
 </div>
 
-<?php require '../includes/student_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

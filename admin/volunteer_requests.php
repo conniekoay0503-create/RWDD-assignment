@@ -108,4 +108,4 @@ page_head('heart', 'Volunteer requests', 'Students who want to repair devices. A
         </ul>
     </section>
 <?php endif; ?>
-<?php require '../includes/admin_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

@@ -87,4 +87,4 @@ page_head($edit ? 'edit' : 'plus', $edit ? 'Edit ' . $edit['category_name'] : 'A
         </div>
     </form>
 </section>
-<?php require '../includes/admin_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

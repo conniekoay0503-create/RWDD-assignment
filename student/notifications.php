@@ -114,4 +114,4 @@ page_head('bell', 'Notifications', 'Updates about your devices, points and campu
     </div>
 </div>
 
-<?php require '../includes/student_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

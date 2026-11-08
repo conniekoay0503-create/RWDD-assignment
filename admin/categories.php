@@ -71,4 +71,4 @@ page_head('tag', 'Categories & points', 'Repaired = weight × multiplier × 2 ·
         </article>
     <?php endforeach; ?>
 </section>
-<?php require '../includes/admin_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

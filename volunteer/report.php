@@ -116,4 +116,4 @@ require '../includes/report_head.php';   // same report top as the admin Reports
 
 <?php endif; ?>
 
-<?php require '../includes/volunteer_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

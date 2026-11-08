@@ -199,4 +199,4 @@ page_head('device', $device['device_name'], $id . ' · ' . $device['category_nam
     </div>
 </div>
 
-<?php require '../includes/student_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

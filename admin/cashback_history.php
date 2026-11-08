@@ -52,4 +52,4 @@ page_head('history', 'Cashback history', 'Every request that has been paid or re
         </div>
     <?php endif; ?>
 </section>
-<?php require '../includes/admin_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

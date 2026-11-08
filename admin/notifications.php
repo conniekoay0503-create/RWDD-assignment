@@ -73,4 +73,4 @@ page_head('bell', 'Notifications', 'Messages sent to you by the system and other
     </ul>
     <?php if (!$list) empty_state('bell', 'Nothing here.'); ?>
 </section>
-<?php require '../includes/admin_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

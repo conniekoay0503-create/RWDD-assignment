@@ -19,4 +19,4 @@ $page_title = 'My profile';
 require '../includes/student_top.php';
 page_head('user', 'My profile', 'Your details and password.');
 require '../includes/profile_view.php';
-require '../includes/student_bottom.php';
+require '../includes/bottom.php';

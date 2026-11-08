@@ -146,4 +146,4 @@ require '../includes/admin_top.php';
         </div>
     </section>
 </div>
-<?php require '../includes/admin_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

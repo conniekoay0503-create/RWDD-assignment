@@ -147,4 +147,4 @@ page_head('user', 'My profile', 'Your details and password.');
         <a class="btn btn-danger" href="../logout.php" data-confirm="Log out now?"><?= icon('logout') ?> Log out</a>
     </section>
 </div>
-<?php require '../includes/admin_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>

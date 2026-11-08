@@ -175,4 +175,4 @@ function vol_err($errors, $key) { return isset($errors[$key]) ? '<small class="f
     </div>
 </div>
 
-<?php require '../includes/volunteer_bottom.php'; ?>
+<?php require '../includes/bottom.php'; ?>
