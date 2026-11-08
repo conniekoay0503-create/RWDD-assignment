@@ -245,7 +245,11 @@ const DEADLINE_DAYS = 7;   // a device may wait this many days before it counts 
 // The device is at the Green Hub counter and the OWNER must come and collect it
 const WAITING_FOR_OWNER = ['Ready for Collection', 'Returned Unrepaired', 'Returned Unclaimed'];
 // Someone must decide or act: the owner (recycle or return?) or the volunteer (take it to the counter)
-const WAITING_FOR_ACTION = ['Pending Consent', 'Return Requested'];
+const WAITING_FOR_ACTION = ['Pending Consent', 'Return Requested', 'In Repair'];   // In Repair = waiting for the volunteer to finish
+// Highest number an admin may type for points / bonus / stock. The columns are INT (max about 2.1 billion);
+// a bigger number would be a database error, so the forms stop it first.
+const MAX_NUMBER_INPUT = 100000;
+
 // How the Green Hub gets rid of a device (officer: recycle, confirm recycling, dispose). One list for every page.
 const DISPOSAL_METHODS = ['Certified e-waste recycler', 'Battery take-back programme', 'Metal recovery', 'Harvest parts for repair stock'];
 
@@ -258,6 +262,15 @@ const FINISHED_STATUSES = ['Cancelled', 'Completed', 'Collected Unrepaired', 'Re
 // How many of this student's devices are NOT finished yet.
 // Used before a student becomes a volunteer / officer: the student pages are the only place where the
 // owner can choose "recycle or return" or press "Confirm collection", so those devices would get stuck.
+// How many repair jobs this volunteer still holds (only they can move these devices on).
+// Used before the account is deactivated, for the same reason as open_devices_count().
+function open_jobs_count($conn, $tp_number)
+{
+    return (int) db_value($conn,
+        "SELECT COUNT(*) FROM devices WHERE claimed_by = ? AND status IN ('Claimed', 'In Repair', 'Return Requested')",
+        's', [$tp_number]);
+}
+
 function open_devices_count($conn, $tp_number)
 {
     return (int) db_value($conn,

@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $errors = [];
     if ($name === '' || mb_strlen($name) > 50)             $errors[] = 'Category name is required (max 50 characters).';
     if ($mult === false || $mult <= 0 || $mult > 99999) $errors[] = 'Multiplier must be a number above 0.';
-    if ($max === false || $max <= 0)                    $errors[] = 'Max points must be a whole number above 0.';
+    if ($max === false || $max <= 0 || $max > MAX_NUMBER_INPUT) $errors[] = 'Max points must be a whole number from 1 to ' . MAX_NUMBER_INPUT . '.';
     // Name must be unique (ignore the category we are editing)
     if (db_value($conn, "SELECT COUNT(*) FROM categories WHERE category_name = ? AND categoryID <> ?", 'ss', [$name, $id]) > 0) {
         $errors[] = 'A category with this name already exists.';
@@ -72,7 +72,7 @@ page_head($edit ? 'edit' : 'plus', $edit ? 'Edit ' . $edit['category_name'] : 'A
             </div>
             <div class="field">
                 <label for="max_points"><?= icon('star') ?> Max points per device</label>
-                <input type="number" id="max_points" name="max_points" min="1" step="1" required value="<?= e($form['max_points'] ?? '') ?>">
+                <input type="number" id="max_points" name="max_points" min="1" max="<?= MAX_NUMBER_INPUT ?>" step="1" required value="<?= e($form['max_points'] ?? '') ?>">
                 <small class="field-hint">The most one device can earn, so a very heavy device cannot earn too many points.</small>
             </div>
         </div>

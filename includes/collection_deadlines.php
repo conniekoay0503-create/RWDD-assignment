@@ -20,6 +20,7 @@ function check_collection_deadlines($conn)
     // 1. Dropped off, but no volunteer claimed it in 7 days -> 'Returned Unclaimed' (written by the volunteer part)
     require_once __DIR__ . '/volunteer_logic.php';
     vol_return_expired($conn);
+    vol_release_stale_claims($conn);   // Claimed but never picked up in 7 days -> back to the queue
 
     // 2. Waiting at the Green Hub counter for more than 7 days -> tell the owner, the admins and the officers (once)
     $devices = db_all($conn,
@@ -46,6 +47,10 @@ function check_collection_deadlines($conn)
             // The owner must choose: recycle it, or ask for it back
             notify_once($conn, $d['submitted_by'], 'Decision needed: ' . $d['deviceID'],
                 'Your ' . $d['device_name'] . ' could not be repaired. Please open it in My Devices and choose: recycle it, or ask for it back.');
+        } elseif ($d['status'] === 'In Repair') {
+            // The volunteer has had the device for more than 7 days: remind them (it is NOT taken away)
+            notify_once($conn, $d['claimed_by'], 'Repair overdue: ' . $d['deviceID'],
+                $d['device_name'] . ' has been in repair for more than ' . DEADLINE_DAYS . ' days. Please finish it, or mark it as "Can\'t be fixed".');
         } elseif ($d['claimed_by']) {
             // 'Return Requested': the volunteer must bring it back to the Green Hub counter
             notify_once($conn, $d['claimed_by'], 'Return overdue: ' . $d['deviceID'],

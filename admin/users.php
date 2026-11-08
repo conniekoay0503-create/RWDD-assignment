@@ -11,8 +11,16 @@ $me = $_SESSION['tp_number'];
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'set_active') {
     $tp     = $_POST['tp_number'] ?? '';
     $active = ($_POST['is_active'] ?? '') === '1' ? 1 : 0;
-    if ($tp === $me) {
+    // Someone who leaves (here: cannot log in any more) must not leave unfinished work behind.
+    // Same idea as changing a role: open_devices_count() / open_jobs_count() in functions.php.
+    if (!is_string($tp) || !preg_match('/^TP[0-9]{6}$/', $tp)) {
+        set_flash('error', 'Invalid TP number.');
+    } elseif ($tp === $me) {
         set_flash('error', 'You cannot deactivate your own account.');
+    } elseif (!$active && ($n = open_devices_count($conn, $tp)) > 0) {
+        set_flash('error', $tp . ' still has ' . $n . ' device(s) in progress, so the account cannot be deactivated yet.');
+    } elseif (!$active && ($n = open_jobs_count($conn, $tp)) > 0) {
+        set_flash('error', $tp . ' still has ' . $n . ' repair job(s) in progress. They must finish them first.');
     } else {
         db_exec($conn, "UPDATE users SET is_active = ? WHERE tp_number = ?", 'is', [$active, $tp]);
         set_flash('success', $tp . ($active ? ' has been activated.' : ' has been deactivated and can no longer log in.'));

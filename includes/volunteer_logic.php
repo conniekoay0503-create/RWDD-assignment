@@ -131,6 +131,32 @@ function vol_return_expired($conn)
     return $returned;
 }
 
+/*
+ * CLAIM EXPIRES: 'Claimed' means "I will take it", but the device is still at the Green Hub counter
+ * (the volunteer only takes it when they press "Confirm receipt" -> 'In Repair').
+ * If they never come within DEADLINE_DAYS, the device goes back to the queue for another volunteer.
+ * (In Repair is NOT sent back: a repair can take long, so that volunteer only gets a reminder.)
+ */
+function vol_release_stale_claims($conn)
+{
+    $stale = db_all($conn, "SELECT deviceID, claimed_by, device_name FROM devices WHERE " . overdue_sql(['Claimed']));
+
+    foreach ($stale as $d) {
+        vol_transaction($conn, function () use ($conn, $d) {
+            // The WHERE repeats the rule: if the volunteer pressed "Confirm receipt" a moment ago, 0 rows change
+            $changed = db_exec($conn,
+                "UPDATE devices SET status = 'Dropped Off', claimed_by = NULL, status_changed_at = NOW()
+                  WHERE deviceID = ? AND " . overdue_sql(['Claimed']), 's', [$d['deviceID']]);
+            if ($changed !== 1) return [false, ''];
+
+            vol_log_status($conn, $d['deviceID'], null, 'Dropped Off', 'Claim expired after ' . DEADLINE_DAYS . ' days');   // NULL = the system
+            notify($conn, $d['claimed_by'], 'Claim expired',
+                'You did not pick up ' . $d['device_name'] . ' within ' . DEADLINE_DAYS . ' days, so it is back in the repair queue for another volunteer.');
+            return [true, ''];
+        });
+    }
+}
+
 /* Dropped-off devices nobody has claimed, oldest first. A volunteer never sees their own device. */
 function vol_queue($conn, $me)
 {

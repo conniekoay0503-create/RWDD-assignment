@@ -27,7 +27,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             // Stock was already reserved when the student submitted the request.
             // Do not decrement it again on approval.
-            notify($conn, $red['tp_number'], 'Cashback paid', rm($red['cash_value']) . ' has been paid to the APCard linked to your email.', $me);
+            // The admin pays AFTER pressing Approve, so the message says "will be paid", not "has been paid"
+            notify($conn, $red['tp_number'], 'Cashback approved', rm($red['cash_value']) . ' has been approved and will be paid to the APCard linked to your email shortly.', $me);
             $conn->commit();
             set_flash('success', 'Approved. Please pay ' . rm($red['cash_value']) . ' to the APCard linked to ' . $red['email'] . '.');
         } catch (Exception $ex) {

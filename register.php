@@ -136,7 +136,7 @@ require 'includes/public_top.php';
             </div>
             <label class="check">
                 <input type="checkbox" name="terms" value="1" required <?= !empty($_POST['terms']) ? 'checked' : '' ?>>
-                I agree to the terms of use and privacy notice, including that uncollected devices may be recycled after 7 days.
+                I agree to the terms of use and privacy notice, including that a device not collected within <?= DEADLINE_DAYS ?> days, and not collected within <?= DISPOSE_WAIT_HOURS ?> hours of a reminder, may be disposed of.
             </label>
             <button type="submit" class="btn btn-primary btn-block">Create Account</button>
         </form>

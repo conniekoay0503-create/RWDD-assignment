@@ -47,14 +47,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
             } elseif ($action === 'fixed') {
-                // The points are worked out from the weight, so the officer must have recorded it first
+                // The points are worked out from the weight, so the volunteer must have recorded it first (at "Confirm receipt")
                 $weight = db_value($conn, "SELECT weight_kg FROM devices WHERE deviceID = ? AND claimed_by = ?", 'ss', [$device_id, $me]);
                 if ($weight === null) {
                     set_flash('error', 'The weight is not recorded yet. It is entered when you confirm receipt.');
                 } else {
                     [$ok, $r] = vol_change_status($conn, $device_id, $me, 'In Repair', 'Ready for Collection',
                         $note !== '' ? $note : 'Repair finished',
-                        'Ready for collection', 'Your {device} is repaired. Please collect it within 7 days.');
+                        'Ready for collection', 'Your {device} is repaired. Please collect it within ' . DEADLINE_DAYS . ' days.');
                     set_flash($ok ? 'success' : 'error', $ok ? '"' . $r . '" is marked as fixed. The owner was notified.' : $r);
                 }
 

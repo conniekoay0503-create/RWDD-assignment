@@ -17,9 +17,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $errors = [];
     if ($name === '' || mb_strlen($name) > 100) $errors[] = 'Reward name is required (max 100 characters).';
     if ($desc === '' || mb_strlen($desc) > 255) $errors[] = 'Description is required (max 255 characters).';
-    if ($points === false || $points <= 0)   $errors[] = 'Points required must be a whole number above 0.';
-    if ($cash === false || $cash <= 0)       $errors[] = 'Cash value must be above 0.';
-    if ($stock === false || $stock < 0)      $errors[] = 'Stock must be 0 or more.';
+    if ($points === false || $points <= 0 || $points > MAX_NUMBER_INPUT) $errors[] = 'Points required must be a whole number from 1 to ' . MAX_NUMBER_INPUT . '.';
+    if ($cash === false || $cash <= 0 || $cash > 10000) $errors[] = 'Cash value must be from RM 0.01 to RM 10,000.';
+    if ($stock === false || $stock < 0 || $stock > MAX_NUMBER_INPUT) $errors[] = 'Stock must be a whole number from 0 to ' . MAX_NUMBER_INPUT . '.';
     // Only one reward of the same cash value can be on offer at a time.
     // If another one still has stock, the admin must wait until it runs out (or add stock to that one instead).
     if ($cash !== false && $cash > 0) {
@@ -77,15 +77,15 @@ page_head($edit ? 'edit' : 'plus', $edit ? 'Edit reward' : 'Add a reward', 'Stud
         <div class="field-row">
             <div class="field">
                 <label for="points_required"><?= icon('star') ?> Points needed</label>
-                <input type="number" id="points_required" name="points_required" min="1" step="1" required value="<?= e($form['points_required'] ?? '') ?>">
+                <input type="number" id="points_required" name="points_required" min="1" max="<?= MAX_NUMBER_INPUT ?>" step="1" required value="<?= e($form['points_required'] ?? '') ?>">
             </div>
             <div class="field">
                 <label for="cash_value"><?= icon('wallet') ?> Cash value (RM)</label>
-                <input type="number" id="cash_value" name="cash_value" min="0.01" step="0.01" required value="<?= e($form['cash_value'] ?? '') ?>">
+                <input type="number" id="cash_value" name="cash_value" min="0.01" max="10000" step="0.01" required value="<?= e($form['cash_value'] ?? '') ?>">
             </div>
             <div class="field">
                 <label for="stock"><?= icon('box') ?> Stock</label>
-                <input type="number" id="stock" name="stock" min="0" step="1" required value="<?= e($form['stock'] ?? '0') ?>">
+                <input type="number" id="stock" name="stock" min="0" max="<?= MAX_NUMBER_INPUT ?>" step="1" required value="<?= e($form['stock'] ?? '0') ?>">
             </div>
         </div>
         <div class="btn-row">

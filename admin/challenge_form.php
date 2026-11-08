@@ -40,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($title === '' || mb_strlen($title) > 100)                 $errors[] = 'Title is required (max 100 characters).';
     if ($desc === '' || mb_strlen($desc) > 255)                   $errors[] = 'Description is required (max 255 characters).';
     if ($target === false || $target <= 0 || $target > 999999) $errors[] = 'Target must be above 0 kg.';
-    if ($bonus === false || $bonus <= 0)                       $errors[] = 'Bonus points must be a whole number above 0.';
+    if ($bonus === false || $bonus <= 0 || $bonus > MAX_NUMBER_INPUT) $errors[] = 'Bonus points must be a whole number from 1 to ' . MAX_NUMBER_INPUT . '.';
     if (!$valid_date($start) || !$valid_date($end)) {
         $errors[] = 'Please choose a valid start and end date.';
     } else {
@@ -127,7 +127,7 @@ page_head($edit ? 'edit' : 'plus', $edit ? 'Edit challenge' : 'Create a challeng
             </div>
             <div class="field">
                 <label for="bonus_points"><?= icon('star') ?> Bonus points</label>
-                <input type="number" id="bonus_points" name="bonus_points" min="1" step="1" required value="<?= e($form['bonus_points'] ?? '') ?>">
+                <input type="number" id="bonus_points" name="bonus_points" min="1" max="<?= MAX_NUMBER_INPUT ?>" step="1" required value="<?= e($form['bonus_points'] ?? '') ?>">
             </div>
         </div>
         <div class="btn-row">

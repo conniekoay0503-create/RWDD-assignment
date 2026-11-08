@@ -130,8 +130,11 @@ Every status change also INSERTs one row into `device_status_history` (the timel
 
 **7-day rules.** XAMPP has no scheduler, so `require_role()` checks them when a page opens (at most once every 5 minutes per user, a *throttle*, so the pages stay fast). The rule is written **once**, in `functions.php` (`DEADLINE_DAYS`, `WAITING_FOR_OWNER`, `WAITING_FOR_ACTION`, `overdue_sql()`), and every page uses it:
 - **WAITING_FOR_OWNER** (Ready for Collection, Returned Unrepaired, Returned Unclaimed) for more than 7 days: overdue. `check_collection_deadlines()` notifies the owner, the admins and the officers (once), and the device appears on the officer's Abandoned Devices page. There the officer first presses **Remind owner**; only **24 hours** after a reminder (`DISPOSE_WAIT_HOURS`) can the device be disposed of (checked in SQL, and the button is disabled until then). The disposal methods are one shared list, `DISPOSAL_METHODS`.
-- **WAITING_FOR_ACTION** (Pending Consent, Return Requested) for more than 7 days: also overdue on the admin dashboard. `check_collection_deadlines()` reminds the person who must act (once): the owner for Pending Consent (recycle or return?), the volunteer for Return Requested (bring it to the counter). These are never on the Abandoned Devices page, so a Return Requested device can **never** be disposed of: the student has asked for it back.
+- **WAITING_FOR_ACTION** (Pending Consent, Return Requested, In Repair) for more than 7 days: also overdue on the admin dashboard. `check_collection_deadlines()` reminds the person who must act (once): the owner for Pending Consent (recycle or return?), the volunteer for Return Requested (bring it to the counter) and for In Repair (finish it, or mark it as "Can't be fixed"; the device is not taken away, because a repair can take long). These are never on the Abandoned Devices page, so a Return Requested device can **never** be disposed of: the student has asked for it back.
 - Dropped off but not claimed within 7 days: becomes Returned Unclaimed (`vol_return_expired()`).
+- Claimed but not picked up within 7 days (the device is still at the counter): goes back to the repair queue for another volunteer, and the volunteer is told (`vol_release_stale_claims()`).
+
+Every status that waits for a person has a deadline or a reminder, so no device can wait forever.
 
 ## 5. Points and cashback
 
@@ -152,7 +155,9 @@ When the points are given:
 
 **Challenges:** a device counts when it is repaired and collected, or recycled, during the challenge (`CHALLENGE_STATUSES`, `challenge_kg()` in `functions.php`; the student page uses the same rule). After a challenge ends, the admin presses **Award bonus** on the Challenges page. Every student who reached the target gets the bonus once (the UNIQUE key `(challengeID, tp_number)` stops a second one). The target is **per student** and the bonus is **for students only**; the volunteer Challenge page just shows the campus numbers from `challenge_summary()` (same rule).
 
-**Changing role.** A student becomes a volunteer (approved request) or an officer (Assign officer) only when none of their devices is still in progress (`open_devices_count()`, `FINISHED_STATUSES`). Otherwise the device would get stuck: only the student pages let the owner choose recycle / return or confirm collection.
+**Changing role.** A student becomes a volunteer (approved request) or an officer (Assign officer) only when none of their devices is still in progress (`open_devices_count()`, `FINISHED_STATUSES`). Otherwise the device would get stuck: only the student pages let the owner choose recycle / return or confirm collection. The same check is on the student's Become a Volunteer page (they cannot apply yet) and on the admin's request card (Approve is disabled).
+
+**Deactivating an account** (admin Users page) is also "leaving", so it has the same check: not while the person still has devices in progress (`open_devices_count()`) or repair jobs (`open_jobs_count()`: Claimed, In Repair, Return Requested).
 
 Example: Phone / Tablet, multiplier 500, max 300. A 0.2 kg phone is worth 0.2 × 500 = 100 points, or 200 if it is repaired.
 

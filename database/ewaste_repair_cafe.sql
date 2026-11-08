@@ -74,8 +74,10 @@ CREATE TABLE `categories` (
   `category_name` varchar(50) NOT NULL,
   `multiplier` decimal(7,2) NOT NULL,
   `max_points` int(11) NOT NULL,
-  `is_active` tinyint(1) NOT NULL DEFAULT 1
-) ;
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  CONSTRAINT `chk_cat_multiplier` CHECK (`multiplier` > 0),
+  CONSTRAINT `chk_cat_max` CHECK (`max_points` > 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `categories`
@@ -103,8 +105,11 @@ CREATE TABLE `challenges` (
   `start_date` date NOT NULL,
   `end_date` date NOT NULL,
   `bonus_points` int(11) NOT NULL,
-  `created_at` datetime NOT NULL DEFAULT current_timestamp()
-) ;
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  CONSTRAINT `chk_ch_target` CHECK (`target_kg` > 0),
+  CONSTRAINT `chk_ch_bonus` CHECK (`bonus_points` > 0),
+  CONSTRAINT `chk_ch_dates` CHECK (`end_date` >= `start_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `challenges`
@@ -136,8 +141,10 @@ CREATE TABLE `devices` (
   `terms_accepted` tinyint(1) NOT NULL,
   `recycle_consent` tinyint(1) DEFAULT NULL,
   `submitted_at` datetime NOT NULL DEFAULT current_timestamp(),
-  `status_changed_at` datetime NOT NULL DEFAULT current_timestamp()
-) ;
+  `status_changed_at` datetime NOT NULL DEFAULT current_timestamp(),
+  CONSTRAINT `chk_dev_weight` CHECK (`weight_kg` IS NULL OR (`weight_kg` > 0 AND `weight_kg` <= 50)),
+  CONSTRAINT `chk_dev_terms` CHECK (`terms_accepted` = 1)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `devices`
@@ -410,8 +417,11 @@ CREATE TABLE `rewards` (
   `description` varchar(255) NOT NULL,
   `points_required` int(11) NOT NULL,
   `cash_value` decimal(8,2) NOT NULL,
-  `stock` int(11) NOT NULL DEFAULT 0
-) ;
+  `stock` int(11) NOT NULL DEFAULT 0,
+  CONSTRAINT `chk_rw_points` CHECK (`points_required` > 0),
+  CONSTRAINT `chk_rw_cash` CHECK (`cash_value` > 0),
+  CONSTRAINT `chk_rw_stock` CHECK (`stock` >= 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `rewards`
