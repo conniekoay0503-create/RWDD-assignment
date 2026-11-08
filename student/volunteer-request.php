@@ -26,6 +26,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($pending) throw new RuntimeException('You already have a pending request.');
 
+            // Same rule as the admin's Approve button (open_devices_count() in functions.php):
+            // a volunteer cannot use the student pages, so the devices must be finished first
+            $open = open_devices_count($conn, $tp);
+            if ($open > 0) throw new RuntimeException('You still have ' . $open . ' device(s) in progress. You can apply after they are finished.');
+
             // save my application
             $id = next_id($conn, 'volunteer_request', 'requestID', 'VR');
             db_exec($conn, "INSERT INTO volunteer_request
@@ -56,6 +61,7 @@ $requests = db_all($conn, "SELECT requestID, reason, status, requested_at, revie
     ORDER BY requested_at DESC", 's', [$tp]);
 
 $pending = in_array('pending', array_column($requests, 'status'), true);
+$open = open_devices_count($conn, $tp);   // devices that are not finished yet
 
 $page_title = 'Become a Volunteer';
 require '../includes/student_top.php';
@@ -72,7 +78,11 @@ $badge = ['pending' => 'badge-warn', 'approved' => 'badge-ok', 'rejected' => 'ba
         <h2 class="section-title"><?= icon('send') ?> Volunteer application</h2>
         <section class="card">
             <?php if ($pending): ?>
-                <?php empty_state('clock', 'Your application is waiting for an admin. We will notify you when it is reviewed.'); ?>
+                <?php empty_state('clock', 'Your application is waiting for an admin. We will notify you when it is reviewed.'
+                    . ($open > 0 ? ' Note: you have ' . $open . ' device(s) in progress, and the admin can only approve it after they are finished.' : '')); ?>
+            <?php elseif ($open > 0): ?>
+                <?php empty_state('device', 'You have ' . $open . ' device(s) in progress. You can apply after they are finished, because a volunteer cannot use the student pages to collect them.'); ?>
+                <div class="btn-row"><a class="btn btn-outline" href="my-devices.php"><?= icon('device') ?> View My Devices</a></div>
             <?php else: ?>
                 <form method="post" novalidate data-validate data-confirm="Send your volunteer application?">
                     <?= csrf_field() ?>

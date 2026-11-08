@@ -64,6 +64,7 @@ page_head('heart', 'Volunteer requests', 'Students who want to repair devices. A
 <?php if (!$pending) empty_state('heart', 'No pending requests.'); ?>
 <section class="tile-grid">
     <?php foreach ($pending as $r): ?>
+        <?php $open = open_devices_count($conn, $r['tp_number']); // same rule as the server check when Approve is pressed ?>
         <article class="request-card">
             <header>
                 <span class="avatar small"><?= e(mb_strtoupper(mb_substr($r['name'], 0, 1))) ?></span>
@@ -74,13 +75,17 @@ page_head('heart', 'Volunteer requests', 'Students who want to repair devices. A
             </header>
             <blockquote><?= e($r['reason']) ?></blockquote>
             <small class="muted"><?= icon('calendar') ?> Asked on <?= nice_date($r['requested_at']) ?></small>
+            <?php if ($open > 0): ?>
+                <small class="request-warn"><?= icon('alert') ?> <?= $open ?> device(s) still in progress. Approve after they are finished.</small>
+            <?php endif; ?>
             <footer>
                 <form method="post" data-confirm="Approve <?= e($r['name']) ?> as a Repair Volunteer?">
                     <?= csrf_field() ?>
                     <input type="hidden" name="action" value="review_request">
                     <input type="hidden" name="requestID" value="<?= e($r['requestID']) ?>">
                     <input type="hidden" name="decision" value="approved">
-                    <button class="btn btn-primary btn-sm"><?= icon('check') ?> Approve</button>
+                    <!-- Disabled only on screen; the server still checks open_devices_count() when the form is sent -->
+                    <button class="btn btn-primary btn-sm" <?= $open > 0 ? 'disabled title="Wait until the devices are finished"' : '' ?>><?= icon('check') ?> Approve</button>
                 </form>
                 <form method="post" data-confirm="Reject this request?">
                     <?= csrf_field() ?>

@@ -55,10 +55,24 @@ document.addEventListener('click', function (event) {
 });
 
 // ===3. Confirm before a link is followed (pop-up message) ===
+// data-confirm-if-filled: only ask when the user typed or chose something in the form around the link
+// (e.g. Cancel on Submit Device: an empty form has nothing to lose, so no pop-up).
+function formIsFilled(form) {
+    if (!form) return false;
+    return Array.prototype.some.call(form.elements, function (el) {
+        if (el.type === 'hidden' || el.type === 'submit' || el.type === 'button') return false;
+        if (el.type === 'checkbox' || el.type === 'radio') return el.checked;
+        if (el.type === 'file') return el.files.length > 0;
+        return el.value.trim() !== '';
+    });
+}
 document.addEventListener('click', function (event){
     var link = event.target.closest('a[data-confirm]');
+    if (!link) return;
+    // Empty form -> follow the link straight away, without the pop-up
+    if (link.hasAttribute('data-confirm-if-filled') && !formIsFilled(link.closest('form'))) return;
     // Check whether the user cancels the confirmation dialog
-    if (link && !confirm(link.getAttribute('data-confirm'))){
+    if (!confirm(link.getAttribute('data-confirm'))){
         // Prevent navigation if the user cancels the confirmation
         event.preventDefault();
     }

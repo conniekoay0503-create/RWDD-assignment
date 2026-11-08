@@ -593,6 +593,8 @@ footer form { margin: 0; }
 .time-bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--primary)); border-radius: 4px; }
 
 .request-card header { display: flex; align-items: center; gap: 0.7rem; }
+/* "N device(s) still in progress" on a volunteer request: the reason why Approve is disabled */
+.request-warn { display: flex; align-items: center; gap: 0.35rem; color: var(--danger); font-weight: 600; }
 .request-card header > div { display: flex; flex-direction: column; min-width: 0; }
 .money { font-family: var(--font-display); font-size: 2rem; font-weight: 800; color: var(--primary-dark); line-height: 1.1; }
 blockquote { margin: 0; padding: 0.7rem 0.95rem; border-left: 4px solid var(--primary); background: var(--surface-2); border-radius: 0 12px 12px 0; font-size: 0.98rem; }

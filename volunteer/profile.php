@@ -18,25 +18,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($form === 'details') {
         $name  = trim((string) ($_POST['name'] ?? ''));
-        $email = strtolower(trim((string) ($_POST['email'] ?? '')));   // lower case, same as register.php
         $phone = clean_phone($_POST['phone'] ?? '');                    // removes spaces and dashes
         $len   = mb_strlen($name);
 
         if ($len < 2 || $len > 100)                                            $errors['name']  = 'Name must be 2 to 100 characters.';
-        // Same rules as register.php (functions.php): APU email only, Malaysian mobile number
-        if (!valid_apu_email($email) || mb_strlen($email) > 100) $errors['email'] = 'Please use your APU student email, e.g. tp012345@mail.apu.edu.my.';
+        // Same phone rule as register.php (functions.php). The email cannot be changed (same as the other roles).
         if (!valid_phone($phone))                                 $errors['phone'] = PHONE_ERROR;
 
-        if (!isset($errors['email']) && db_value($conn, "SELECT COUNT(*) FROM users WHERE email = ? AND tp_number <> ?", 'ss', [$email, $me]) > 0) {
-            $errors['email'] = 'That email is already used by another account.';
-        }
         if (!$errors) {
-            db_exec($conn, "UPDATE users SET name = ?, email = ?, phone = ? WHERE tp_number = ?", 'ssss', [$name, $email, $phone, $me]);
+            db_exec($conn, "UPDATE users SET name = ?, phone = ? WHERE tp_number = ?", 'sss', [$name, $phone, $me]);
             $_SESSION['name'] = $name;
             set_flash('success', 'Your details were saved.');
             redirect('profile.php#details');
         }
-        $typed = ['name' => $name, 'email' => $email, 'phone' => $phone];
+        $typed = ['name' => $name, 'phone' => $phone];
 
     } elseif ($form === 'password') {
         $cur = (string) ($_POST['current'] ?? '');
@@ -62,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $user = db_one($conn, "SELECT name, tp_number, email, phone, is_active FROM users WHERE tp_number = ?", 's', [$me]);
-$val  = $typed ?: ['name' => $user['name'], 'email' => $user['email'], 'phone' => $user['phone']];
+$val  = $typed ?: ['name' => $user['name'], 'phone' => $user['phone']];
 $role = db_one($conn, "SELECT v.assigned_at, a.name AS admin_name FROM volunteers v
                          LEFT JOIN users a ON a.tp_number = v.assigned_by WHERE v.tp_number = ?", 's', [$me]);
 $approved_at = db_value($conn, "SELECT reviewed_at FROM volunteer_request WHERE tp_number = ? AND status = 'approved'
@@ -105,9 +100,9 @@ function vol_err($errors, $key) { return isset($errors[$key]) ? '<small class="f
                 </div>
                 <div class="field">
                     <label for="p-email">Email</label>
-                    <input id="p-email" type="email" name="email" value="<?= e($val['email']) ?>" maxlength="100" required
-                           pattern="<?= e(APU_EMAIL_PATTERN) ?>" data-error="Use your APU email (@mail.apu.edu.my)">
-                    <?= ($_POST['form'] ?? '') === 'details' ? vol_err($errors, 'email') : '' ?>
+                    <!-- No name="email": the box is only shown, never sent (same as the student / officer / admin profile) -->
+                    <input id="p-email" type="email" value="<?= e($user['email']) ?>" disabled>
+                    <small class="muted">Your email and TP number identify you, so they cannot be changed here.</small>
                 </div>
                 <div class="field">
                     <label for="p-phone">Phone</label>

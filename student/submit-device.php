@@ -69,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $conn->commit();
                 set_flash('success', 'Device submitted successfully!');
-                redirect('index.php');
+                redirect('my-devices.php');   // straight to the list, where the new device is shown
 
             } catch (Throwable $e) {
                 $conn->rollback();
@@ -147,7 +147,8 @@ page_head('plus', 'Submit a Device', 'Register a broken device for repair or rec
 
         <div class="btn-row">
             <button type="submit" class="btn btn-primary"><?= icon('send') ?> Submit device</button>
-            <a class="btn btn-outline" href="my-devices.php"><?= icon('x') ?> Cancel</a>
+            <!-- Cancel = start again: reload this page empty (clears the boxes, the photo and any error messages) -->
+            <a class="btn btn-outline" href="submit-device.php" data-confirm="Clear everything you filled in?" data-confirm-if-filled><?= icon('x') ?> Cancel</a>
         </div>
     </form>
 </section>
