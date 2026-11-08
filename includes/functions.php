@@ -348,7 +348,6 @@ function check_csrf()
 
 /* ---------- Roles and access control ---------- */
 
-// Figure 2: check the role tables in order admins -> officers -> volunteers -> students
 function find_role($conn, $tp_number)
 {
     $tables = ['admins' => 'admin', 'officers' => 'officer', 'volunteers' => 'volunteer', 'students' => 'student'];
@@ -387,4 +386,17 @@ function require_role($conn, $role, $root)
     }
     check_csrf();                        // every POST form must carry the token
     check_collection_deadlines($conn);   // overdue notifications (XAMPP has no scheduler, so we check on every page)
+}
+
+// Malaysian mobile number: 01 + 8 or 9 digits. Spaces and dashes are removed first.
+function clean_phone($phone) {
+    return preg_replace('/[\s-]/', '', trim((string) $phone));
+}
+function valid_phone($phone) {
+    return preg_match('/^01[0-9]{8,9}$/', $phone) === 1;
+}
+
+// Only APU student emails can register
+function valid_apu_email($email) {
+    return preg_match('/^[a-z0-9._%+-]+@mail\.apu\.edu\.my$/', $email) === 1;
 }
