@@ -1,6 +1,6 @@
 <?php
 /*
- * Categories - add / edit form  (Figure 25, page 2 of 3)
+ * Categories - add / edit form
  * category_form.php           -> add a new category
  * category_form.php?edit=3    -> edit category 3
  */

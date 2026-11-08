@@ -1,6 +1,6 @@
 <?php
 /*
- * Cashback - history of reviewed requests  (Figure 24, page 2 of 4)
+ * Cashback - history of reviewed requests
  */
 require '../config/db.php';
 require '../includes/functions.php';

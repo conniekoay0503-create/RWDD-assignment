@@ -1,7 +1,4 @@
 <?php
-/*
- * Login page  (Figure 1 - login branch, Figure 2 - role routing)
- */
 require 'config/db.php';
 require 'includes/functions.php';
 
@@ -23,17 +20,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($email === '' || $password === '') {
         $error = 'Please enter your email and password.';
     } else {
-        // Figure 1: find the account by email
+        // Find the account by email
         $user = db_one($conn, "SELECT tp_number, name, password, is_active FROM users WHERE email = ?", 's', [$email]);
 
         // Authenticated? password_verify() compares the typed password with the stored hash
         if (!$user || !password_verify($password, $user['password'])) {
             $error = 'Invalid email or password.';
         } elseif ((int) $user['is_active'] !== 1) {
-            // Figure 2: is_active = 1 ?
+            // is_active = 1 ?
             $error = 'Account deactivated. Please contact an Admin.';
         } else {
-            // Figure 2: find the role (admins -> officers -> volunteers -> students)
+            // Find the role (admins -> officers -> volunteers -> students)
             $role = find_role($conn, $user['tp_number']);
             if ($role === null) {
                 $error = 'No role assigned to this account. Please contact an Admin.';

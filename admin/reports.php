@@ -1,6 +1,6 @@
 <?php
 /*
- * Reports  (Figure 28)
+ * Reports
  * Pick a period (month / year / date range) and a report type, preview it, then print or save as PDF.
  * Every query uses   date >= $start AND date < $end   so the last day is fully included.
  */

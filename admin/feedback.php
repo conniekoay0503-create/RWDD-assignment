@@ -1,6 +1,6 @@
 <?php
 /*
- * Feedback - inbox  (Figure 27)
+ * Feedback - inbox
  */
 require '../config/db.php';
 require '../includes/functions.php';

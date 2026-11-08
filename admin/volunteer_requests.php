@@ -1,6 +1,6 @@
 <?php
 /*
- * Users - volunteer requests  (Figure 23, page 2 of 3)
+ * Users - volunteer requests
  * Approve = remove the student role and add the volunteer role, in one transaction.
  */
 require '../config/db.php';

@@ -94,7 +94,7 @@ function vol_log_status($conn, $device_id, $changed_by, $new_status, $remarks)
 }
 
 /* =====================================================================
- * 2. REPAIR QUEUE  (flowchart Figure 15)
+ * 2. REPAIR QUEUE
  * ===================================================================== */
 
 /*

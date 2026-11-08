@@ -1,6 +1,6 @@
 <?php
 /*
- * Announcements - list  (Figure 27, page 1 of 2)
+ * Announcements - list
  * Everyone sees announcements on their dashboard and on the homepage.
  */
 require '../config/db.php';

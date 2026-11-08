@@ -1,6 +1,6 @@
 <?php
 /*
- * My jobs (flowchart Figure 17 + wireframe "My jobs")
+ * My jobs
  *
  *   1. Only a logged-in volunteer may enter.
  *   2. If a button was pressed (POST): read the action, do it, redirect. (require_role() already checked the CSRF token.)

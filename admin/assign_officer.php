@@ -1,6 +1,6 @@
 <?php
 /*
- * Users - assign a Recycling Officer  (Figure 23, page 3 of 3)
+ * Users - assign a Recycling Officer
  * Only an existing student can become an officer: delete the student row, insert the officer row.
  * Two steps:
  *   1. "Find student" (GET ?tp=TP095001) checks the TP number first and shows who it is.

@@ -1,6 +1,6 @@
 <?php
 /*
- * Volunteer Home (wireframe Figure 52). It only READS data.
+ * Volunteer Home. It only READS data.
  * Every number comes from the vol_* functions, so Home, History and Report always agree.
  */
 require '../config/db.php';

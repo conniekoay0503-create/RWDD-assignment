@@ -1,6 +1,6 @@
 <?php
 /*
- * Feedback - read one message, see the device story, and reply  (Figure 27)
+ * Feedback - read one message, see the device story, and reply
  */
 require '../config/db.php';
 require '../includes/functions.php';

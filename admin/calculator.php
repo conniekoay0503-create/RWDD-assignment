@@ -1,6 +1,6 @@
 <?php
 /*
- * Categories - points calculator  (Figure 25, page 3 of 3)
+ * Categories - points calculator
  * Only JavaScript: nothing is saved. It uses the same rule as the server.
  */
 require '../config/db.php';

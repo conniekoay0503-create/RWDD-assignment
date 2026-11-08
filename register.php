@@ -1,6 +1,5 @@
 <?php
 /*
- * Register page  (Figure 1 - register branch)
  * Every new account becomes a Student. Volunteers / Officers are promoted by an Admin later.
  */
 require 'config/db.php';

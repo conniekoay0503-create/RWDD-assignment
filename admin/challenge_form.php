@@ -1,6 +1,6 @@
 <?php
 /*
- * Challenges - create / edit form  (Figure 26, page 2 of 2)
+ * Challenges - create / edit form
  * challenge_form.php          -> create (also posts an announcement)
  * challenge_form.php?edit=3   -> edit challenge 3 (only before it starts)
  * Only one challenge can run at a time, so the dates must not overlap.

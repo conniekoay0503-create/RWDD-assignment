@@ -1,6 +1,6 @@
 <?php
 /*
- * My profile  (Figure 29)
+ * My profile
  * Tabs (switched with JavaScript): Personal details · Password · My role · Preferences · Account
  */
 require '../config/db.php';

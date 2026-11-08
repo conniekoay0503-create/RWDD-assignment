@@ -1,6 +1,6 @@
 <?php
 /*
- * Categories - list  (Figure 25, page 1 of 3)
+ * Categories - list
  * Points rule:  repaired = MIN(weight x multiplier x 2, max)   recycled = MIN(weight x multiplier, max)
  */
 require '../config/db.php';

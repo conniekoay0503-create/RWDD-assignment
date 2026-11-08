@@ -1,6 +1,6 @@
 <?php
 /*
- * Repair history (wireframe Figure 63)
+ * Repair history
  * Every device this volunteer ever claimed, newest first, with four summary numbers.
  */
 require '../config/db.php';

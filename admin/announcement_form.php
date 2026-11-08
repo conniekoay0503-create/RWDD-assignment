@@ -1,6 +1,6 @@
 <?php
 /*
- * Announcements - post / edit  (Figure 27, page 2 of 2)
+ * Announcements - post / edit 
  */
 require '../config/db.php';
 require '../includes/functions.php';

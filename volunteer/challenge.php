@@ -1,6 +1,6 @@
 <?php
 /*
- * Challenge & rank (wireframe Figure 62)
+ * Challenge & rank
  * Challenges are for STUDENTS: each student who reaches target_kg with their own devices gets the bonus
  * (the rule is challenge_kg() / challenge_summary() in functions.php, the same one the admin and student pages use).
  * Volunteers do not get the challenge bonus, so this page only shows how the campus is doing,

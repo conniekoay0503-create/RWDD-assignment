@@ -1,6 +1,6 @@
 <?php
 /*
- * Cashback - pending requests  (Figure 24, page 1 of 4)
+ * Cashback - pending requests
  * Approve & pay: the admin then pays the amount to the student's APCard linked to their email.
  */
 require '../config/db.php';

@@ -1,6 +1,6 @@
 <?php
 /*
- * Admin Dashboard  (Figure 22)
+ * Admin Dashboard
  */
 require '../config/db.php';
 require '../includes/functions.php';

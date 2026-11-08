@@ -1,6 +1,6 @@
 <?php
 /*
- * Cashback - add / edit reward  (Figure 24, page 4 of 4)
+ * Cashback - add / edit reward  
  */
 require '../config/db.php';
 require '../includes/functions.php';

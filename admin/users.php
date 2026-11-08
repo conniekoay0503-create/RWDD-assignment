@@ -1,6 +1,6 @@
 <?php
 /*
- * Users - all users  (Figure 23, page 1 of 3)
+ * Users - all users
  * Activate / deactivate accounts. Inactive users cannot log in.
  */
 require '../config/db.php';

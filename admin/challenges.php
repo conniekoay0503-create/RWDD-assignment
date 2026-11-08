@@ -1,6 +1,6 @@
 <?php
 /*
- * Challenges - list  (Figure 26, page 1 of 2)
+ * Challenges - list
  * Each challenge is an individual target: a student whose own devices reach target_kg
  * (repaired or recycled between start_date and end_date) earns bonus_points once.
  * The kg rule is challenge_kg() in functions.php, the same one the student page shows.

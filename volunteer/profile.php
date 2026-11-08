@@ -1,6 +1,6 @@
 <?php
 /*
- * My profile - 5 tabs (wireframes Figures 53-57)
+ * My profile - 5 tabs 
  * The tabs are buttons handled by main.js (data-tabs / data-tab), so switching tab does not reload the page.
  * Two forms POST here: "details" and "password". The other tabs only show information.
  */
