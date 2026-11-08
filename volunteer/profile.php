@@ -18,13 +18,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($form === 'details') {
         $name  = trim((string) ($_POST['name'] ?? ''));
-        $email = trim((string) ($_POST['email'] ?? ''));
-        $phone = trim((string) ($_POST['phone'] ?? ''));
+        $email = strtolower(trim((string) ($_POST['email'] ?? '')));   // lower case, same as register.php
+        $phone = clean_phone($_POST['phone'] ?? '');                    // removes spaces and dashes
         $len   = mb_strlen($name);
 
         if ($len < 2 || $len > 100)                                            $errors['name']  = 'Name must be 2 to 100 characters.';
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL) || mb_strlen($email) > 100) $errors['email'] = 'Please enter a valid email address.';
-        if (!preg_match('/^[0-9+\- ]{7,15}$/', $phone))                        $errors['phone'] = 'Phone: 7 to 15 characters, digits, +, - or spaces only.';
+        // Same rules as register.php (functions.php): APU email only, Malaysian mobile number
+        if (!valid_apu_email($email) || mb_strlen($email) > 100) $errors['email'] = 'Please use your APU student email, e.g. tp012345@mail.apu.edu.my.';
+        if (!valid_phone($phone))                                 $errors['phone'] = PHONE_ERROR;
 
         if (!isset($errors['email']) && db_value($conn, "SELECT COUNT(*) FROM users WHERE email = ? AND tp_number <> ?", 'ss', [$email, $me]) > 0) {
             $errors['email'] = 'That email is already used by another account.';
@@ -104,13 +105,14 @@ function vol_err($errors, $key) { return isset($errors[$key]) ? '<small class="f
                 </div>
                 <div class="field">
                     <label for="p-email">Email</label>
-                    <input id="p-email" type="email" name="email" value="<?= e($val['email']) ?>" maxlength="100" required>
+                    <input id="p-email" type="email" name="email" value="<?= e($val['email']) ?>" maxlength="100" required
+                           pattern="<?= e(APU_EMAIL_PATTERN) ?>" data-error="Use your APU email (@mail.apu.edu.my)">
                     <?= ($_POST['form'] ?? '') === 'details' ? vol_err($errors, 'email') : '' ?>
                 </div>
                 <div class="field">
                     <label for="p-phone">Phone</label>
-                    <input id="p-phone" type="tel" name="phone" value="<?= e($val['phone']) ?>" maxlength="15" required pattern="[0-9+\- ]{7,15}"
-                           data-error="Phone: 7 to 15 characters, digits, +, - or spaces only.">
+                    <input id="p-phone" type="tel" name="phone" value="<?= e($val['phone']) ?>" maxlength="15" required pattern="<?= PHONE_PATTERN ?>"
+                           data-error="<?= e(PHONE_ERROR) ?>">
                     <?= ($_POST['form'] ?? '') === 'details' ? vol_err($errors, 'phone') : '' ?>
                 </div>
                 <div class="btn-row">

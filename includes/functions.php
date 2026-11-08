@@ -400,3 +400,9 @@ function valid_phone($phone) {
 function valid_apu_email($email) {
     return preg_match('/^[a-z0-9._%+-]+@mail\.apu\.edu\.my$/', $email) === 1;
 }
+
+// The same two rules for the browser (the pattern="..." of the input boxes), so main.js warns before the form is sent.
+// The server checks above are the real protection; these only help the user.
+const PHONE_PATTERN     = '01[0-9]{8,9}';
+const APU_EMAIL_PATTERN = '[A-Za-z0-9._%+\-]+@mail\.apu\.edu\.my';
+const PHONE_ERROR       = 'Malaysian mobile number: 01 + 8 or 9 digits, e.g. 0123456789.';

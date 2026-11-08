@@ -29,7 +29,7 @@
                 </div>
                 <div class="field">
                     <label for="phone">Phone</label>
-                    <input type="tel" id="phone" name="phone" required pattern="[0-9]{9,15}" value="<?= e($user['phone']) ?>" data-error="9 to 15 digits, numbers only">
+                    <input type="tel" id="phone" name="phone" required pattern="<?= PHONE_PATTERN ?>" value="<?= e($user['phone']) ?>" data-error="<?= e(PHONE_ERROR) ?>">
                 </div>
             </div>
             <div class="field">

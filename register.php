@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Read and tidy the inputs
     $old['name']      = trim($_POST['name'] ?? '');
     $old['tp_number'] = strtoupper(trim($_POST['tp_number'] ?? ''));
-    $old['phone']     = trim($_POST['phone'] ?? '');
+    $old['phone']     = clean_phone($_POST['phone'] ?? '');   // removes spaces and dashes (functions.php)
     $old['email']     = strtolower(trim($_POST['email'] ?? ''));
     $password         = $_POST['password'] ?? '';
     $confirm          = $_POST['confirm_password'] ?? '';
@@ -34,11 +34,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($old['tp_number'] !== '' && !preg_match('/^TP[0-9]{6}$/', $old['tp_number'])) {
         $errors[] = 'TP number must be "TP" followed by 6 digits, e.g. TP012345.';
     }
-    if ($old['email'] !== '' && !filter_var($old['email'], FILTER_VALIDATE_EMAIL)) {
-        $errors[] = 'Please enter a valid email address.';
+    // Only an APU student email can register (valid_apu_email() in functions.php)
+    if ($old['email'] !== '' && !valid_apu_email($old['email'])) {
+        $errors[] = 'Please use your APU student email, e.g. tp012345@mail.apu.edu.my.';
     }
-    if ($old['phone'] !== '' && !preg_match('/^[0-9]{9,15}$/', $old['phone'])) {
-        $errors[] = 'Phone number must contain 9 to 15 digits only.';
+    if ($old['phone'] !== '' && !valid_phone($old['phone'])) {
+        $errors[] = PHONE_ERROR;
     }
     if (mb_strlen($old['name']) > 100) {
         $errors[] = 'Name must be 100 characters or fewer.';
@@ -107,13 +108,15 @@ require 'includes/public_top.php';
                 </div>
                 <div class="field">
                     <label for="phone">Phone <small>For pickup and payout</small></label>
-                    <input type="tel" id="phone" name="phone" maxlength="15" pattern="[0-9]{9,15}" value="<?= e($old['phone']) ?>"
-                           required data-error="Digits only (9-15)" autocomplete="tel">
+                    <input type="tel" id="phone" name="phone" maxlength="15" pattern="<?= PHONE_PATTERN ?>" value="<?= e($old['phone']) ?>"
+                           placeholder="0123456789" required data-error="<?= e(PHONE_ERROR) ?>" autocomplete="tel">
                 </div>
             </div>
             <div class="field">
                 <label for="email">Student email</label>
-                <input type="email" id="email" name="email" maxlength="100" value="<?= e($old['email']) ?>" required autocomplete="email">
+                <!-- pattern = the same rule as valid_apu_email(), so the browser warns before sending -->
+                <input type="email" id="email" name="email" maxlength="100" value="<?= e($old['email']) ?>" required autocomplete="email"
+                       placeholder="tp012345@mail.apu.edu.my" pattern="<?= e(APU_EMAIL_PATTERN) ?>" data-error="Use your APU email (@mail.apu.edu.my)">
             </div>
             <div class="field">
                 <label for="password">Password <small>At least 8 characters</small></label>

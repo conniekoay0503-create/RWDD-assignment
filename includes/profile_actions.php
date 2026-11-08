@@ -10,11 +10,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // ---------- Personal details ----------
     if ($action === 'details') {
         $name  = trim($_POST['name'] ?? '');
-        $phone = trim($_POST['phone'] ?? '');
+        $phone = clean_phone($_POST['phone'] ?? '');   // removes spaces and dashes (functions.php)
         if ($name === '' || mb_strlen($name) > 100) {
             set_flash('error', 'Name is required (max 100 characters).');
-        } elseif (!preg_match('/^[0-9]{9,15}$/', $phone)) {
-            set_flash('error', 'Phone number must be 9 to 15 digits, numbers only.');
+        } elseif (!valid_phone($phone)) {   // same rule as register.php
+            set_flash('error', PHONE_ERROR);
         } else {
             db_exec($conn, "UPDATE users SET name = ?, phone = ? WHERE tp_number = ?", 'sss', [$name, $phone, $me]);
             $_SESSION['name'] = $name;   // so the top bar shows the new name straight away

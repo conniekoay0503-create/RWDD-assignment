@@ -14,11 +14,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // ---------- Personal details ----------
     if ($action === 'details') {
         $name  = trim($_POST['name'] ?? '');
-        $phone = trim($_POST['phone'] ?? '');
+        $phone = clean_phone($_POST['phone'] ?? '');   // removes spaces and dashes (functions.php)
         if ($name === '' || mb_strlen($name) > 100) {
             set_flash('error', 'Name is required (max 100 characters).');
-        } elseif (!preg_match('/^[0-9]{9,15}$/', $phone)) {
-            set_flash('error', 'Phone number must be 9 to 15 digits, numbers only.');
+        } elseif (!valid_phone($phone)) {   // same rule as register.php
+            set_flash('error', PHONE_ERROR);
         } else {
             db_exec($conn, "UPDATE users SET name = ?, phone = ? WHERE tp_number = ?", 'sss', [$name, $phone, $me]);
             $_SESSION['name'] = $name;   // so the sidebar shows the new name straight away
@@ -86,7 +86,7 @@ page_head('user', 'My profile', 'Your details and password.');
                 </div>
                 <div class="field">
                     <label for="phone">Phone</label>
-                    <input type="tel" id="phone" name="phone" required pattern="[0-9]{9,15}" value="<?= e($user['phone']) ?>" data-error="9 to 15 digits, numbers only">
+                    <input type="tel" id="phone" name="phone" required pattern="<?= PHONE_PATTERN ?>" value="<?= e($user['phone']) ?>" data-error="<?= e(PHONE_ERROR) ?>">
                 </div>
             </div>
             <div class="field">
