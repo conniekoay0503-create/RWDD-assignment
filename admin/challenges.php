@@ -28,13 +28,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'award
     }
     $students = db_all($conn, "SELECT s.tp_number FROM students s JOIN users u ON u.tp_number = s.tp_number WHERE u.is_active = 1");
     $given = 0;
+    $already = 0;   // reached the target, but got the bonus before (e.g. Award bonus was pressed earlier)
     $conn->begin_transaction();
     try {
         foreach ($students as $s) {
             if (challenge_kg($conn, $ch, $s['tp_number']) < (float) $ch['target_kg']) continue;
             // Already got it? (the UNIQUE key on challengeID + tp_number would also stop a second row)
             $has = db_value($conn, "SELECT COUNT(*) FROM points_transactions WHERE challengeID = ? AND tp_number = ?", 'ss', [$id, $s['tp_number']]);
-            if ($has) continue;
+            if ($has) { $already++; continue; }
             db_exec($conn, "INSERT INTO points_transactions (transactionID, tp_number, challengeID, points, txn_type, description) VALUES (?, ?, ?, ?, 'bonus', ?)",
                 'sssis', [next_id($conn, 'points_transactions', 'transactionID', 'T'), $s['tp_number'], $id, (int) $ch['bonus_points'],
                           'Challenge bonus: ' . $ch['title']]);
@@ -42,7 +43,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'award
             $given++;
         }
         $conn->commit();
-        set_flash('success', $given ? 'Bonus given to ' . $given . ' student(s).' : 'No new student reached the target, so no bonus was given.');
+        if ($given) {
+            $msg = 'Bonus given to ' . $given . ' student(s).' . ($already ? ' ' . $already . ' other(s) already had it.' : '');
+        } elseif ($already) {
+            $msg = 'Everyone who reached the target (' . $already . ' student(s)) already has the bonus. Nothing new to give.';
+        } else {
+            $msg = 'No student reached the target, so no bonus was given.';
+        }
+        set_flash('success', $msg);
     } catch (Throwable $ex) {
         $conn->rollback();
         set_flash('error', 'Something went wrong. Please try again.');
