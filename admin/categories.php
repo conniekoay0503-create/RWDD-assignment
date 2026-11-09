@@ -33,8 +33,7 @@ $categories = db_all($conn, "SELECT c.*,
 $page_title = 'Categories';
 $active = 'categories';
 require '../includes/admin_top.php';
-page_head('tag', 'Categories & points', 'Repaired = weight × multiplier × 2 · Recycled = weight × multiplier · never more than the max.',
-    '<a class="btn btn-primary" href="category_form.php">' . icon('plus') . ' Add category</a>');
+page_head('tag', 'Categories & points', 'Repaired = weight × multiplier × 2 · Recycled = weight × multiplier · never more than the max.');   // "Add category" is already a tab, so no extra button here
 ?>
 <?php if (!$categories) empty_state('tag', 'No categories yet.'); ?>
 <section class="tile-grid">

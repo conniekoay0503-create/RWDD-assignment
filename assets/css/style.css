@@ -589,6 +589,12 @@ footer form { margin: 0; }
 .challenge-tile h2 { margin: 0; font-size: 1.25rem; }
 .challenge-tile p { margin: 0; }
 .challenge-tile.ch-running { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft), var(--shadow); }
+/* Admin challenges: "See who earned it" list (a <details> box) */
+.winner-list { background: var(--surface-2); border-radius: 12px; padding: 0.5rem 0.75rem; font-size: 0.9rem; }
+.winner-list summary { cursor: pointer; font-weight: 600; color: var(--primary-dark); }
+.winner-list summary .icon { color: var(--primary); vertical-align: -0.15em; }
+.winner-list ol { margin: 0.5rem 0 0; padding-left: 1.25rem; display: grid; gap: 0.3rem; }
+.winner-list li { overflow-wrap: anywhere; }
 .time-bar { height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
 .time-bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--primary)); border-radius: 4px; }
 

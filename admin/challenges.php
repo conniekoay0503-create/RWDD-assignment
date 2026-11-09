@@ -61,13 +61,21 @@ $challenges = db_all($conn, "SELECT c.*, u.name AS creator,
                              FROM challenges c JOIN users u ON u.tp_number = c.created_by
                              ORDER BY (CURDATE() > c.end_date), (CURDATE() < c.start_date), c.start_date DESC   -- running, then upcoming, then ended");
 
+// Who earned each bonus: one query for all challenges, then grouped by challengeID in PHP
+$winner_list = [];
+foreach (db_all($conn, "SELECT p.challengeID, p.tp_number, p.created_at, u.name
+                        FROM points_transactions p JOIN users u ON u.tp_number = p.tp_number
+                        WHERE p.txn_type = 'bonus' AND p.challengeID IS NOT NULL
+                        ORDER BY u.name") as $w) {
+    $winner_list[$w['challengeID']][] = $w;
+}
+
 $state_icon = ['Running' => 'flag', 'Upcoming' => 'calendar', 'Ended' => 'check'];
 
 $page_title = 'Challenges';
 $active = 'challenges';
 require '../includes/admin_top.php';
-page_head('flag', 'Challenges', 'Each student who reaches the target with their own devices earns the bonus once.',
-    '<a class="btn btn-primary" href="challenge_form.php">' . icon('plus') . ' Create challenge</a>');
+page_head('flag', 'Challenges', 'Each student who reaches the target with their own devices earns the bonus once.');   // "Create challenge" is already a tab, so no extra button here
 ?>
 <?php if (!$challenges) empty_state('flag', 'No challenges yet. Create the first one!'); ?>
 <section class="tile-grid">
@@ -85,6 +93,19 @@ page_head('flag', 'Challenges', 'Each student who reaches the target with their 
                 <li title="Bonus points"><?= icon('star') ?> <?= (int) $c['bonus_points'] ?> pts</li>
                 <li title="Students who earned the bonus"><?= icon('users') ?> <?= (int) $c['winners'] ?> earned</li>
             </ul>
+            <?php if (!empty($winner_list[$c['challengeID']])): ?>
+                <!-- <details> opens and closes by itself when clicked, no JavaScript needed -->
+                <details class="winner-list">
+                    <summary><?= icon('users') ?> See who earned it</summary>
+                    <ol>
+                        <?php foreach ($winner_list[$c['challengeID']] as $w): ?>
+                            <li>
+                                <?= e($w['name']) ?> <small class="muted">(<?= e($w['tp_number']) ?>) · <?= nice_date($w['created_at']) ?></small>
+                            </li>
+                        <?php endforeach; ?>
+                    </ol>
+                </details>
+            <?php endif; ?>
             <?php if ($c['state'] === 'Running'): ?>
                 <?php $pct = min(100, round($c['day_now'] / $c['total_days'] * 100)); ?>
                 <div class="time-bar" title="Day <?= (int) $c['day_now'] ?> of <?= (int) $c['total_days'] ?>">

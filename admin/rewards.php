@@ -24,8 +24,7 @@ $rewards = db_all($conn, "SELECT w.*, (SELECT COUNT(*) FROM redemptions r WHERE 
 $page_title = 'Rewards';
 $active = 'cashback';
 require '../includes/admin_top.php';
-page_head('gift', 'Rewards', 'What students can swap their points for.',
-    '<a class="btn btn-primary" href="reward_form.php">' . icon('plus') . ' Add reward</a>');
+page_head('gift', 'Rewards', 'What students can swap their points for.');   // "Add reward" is already a tab, so no extra button here
 ?>
 <?php if (!$rewards) empty_state('gift', 'No rewards yet.'); ?>
 <section class="tile-grid small">
