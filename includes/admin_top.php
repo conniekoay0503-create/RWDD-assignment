@@ -55,7 +55,8 @@ $initial = mb_strtoupper(mb_substr($_SESSION['name'], 0, 1));
 // Page title with an icon, followed by the tabs of the current section
 function page_head($icon_name, $title, $desc = '', $actions = '')
 {
-    global $sections, $active, $this_page;
+    // $edit = the row being edited on a *_form.php page (null when adding)
+    global $sections, $active, $this_page, $edit;
     echo '<div class="page-head"><span class="page-icon">' . icon($icon_name) . '</span><div class="page-title">';
     echo '<h1>' . e($title) . '</h1>';
     if ($desc !== '') echo '<p class="page-desc">' . e($desc) . '</p>';
@@ -67,7 +68,8 @@ function page_head($icon_name, $title, $desc = '', $actions = '')
     if (count($subs) > 1) {
         echo '<nav class="subtabs" aria-label="' . e($sections[$active][0]) . ' pages">';
         foreach ($subs as $file => [$label, $ico]) {
-            $on = $file === $this_page;
+            // Editing uses the same file as "Add ...", but it is not adding, so no tab is highlighted
+            $on = $file === $this_page && empty($edit);
             echo '<a href="' . $file . '"' . ($on ? ' class="active" aria-current="page"' : '') . '>' . icon($ico) . '<span>' . e($label) . '</span></a>';
         }
         echo '</nav>';
